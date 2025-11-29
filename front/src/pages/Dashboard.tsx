@@ -1,11 +1,23 @@
 import { useState, useEffect, useRef } from 'react';
-import { Dumbbell, Plus, Search, Trash2, ChevronRight, Info, PlayCircle, X, GripVertical } from 'lucide-react';
+import { 
+  Dumbbell, 
+  Plus, 
+  Search, 
+  Trash2, 
+  ChevronRight, 
+  Info, 
+  PlayCircle, 
+  X, 
+  GripVertical, 
+  Menu, 
+  HelpCircle,
+  ShoppingBag
+} from 'lucide-react';
+
 import { supabase } from '../lib/supabase';
 import { formatarDescricao } from '../utils/formatters';
-import type { UserSession, Exercicio, Rotina, ItemRotina } from '../types.ts';
-
-import { HowToUse } from './HowToUse.tsx';
-import { HelpCircle } from 'lucide-react'; 
+import type { UserSession, Exercicio, Rotina, ItemRotina } from '../types';
+import { HowToUse } from './HowToUse';
 
 interface DashboardProps {
   session: UserSession;
@@ -13,16 +25,22 @@ interface DashboardProps {
 }
 
 export function Dashboard({ session, onLogout }: DashboardProps) {
-  // --- ESTADOS ---
+  // Estado de dados
   const [exercicios, setExercicios] = useState<Exercicio[]>([]);
   const [rotinas, setRotinas] = useState<Rotina[]>([]);
   const [itensRotina, setItensRotina] = useState<ItemRotina[]>([]);
   
+  // EStados de navegação
   const [rotinaSelecionada, setRotinaSelecionada] = useState<string | null>(null);
   const [termoBusca, setTermoBusca] = useState('');
   const [filtroGrupo, setFiltroGrupo] = useState<string | null>(null);
+  
+  // Mobile UI States
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Menu Lateral
+  const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false); // Painel de Detalhes (Tela Cheia no Mobile)
+  const [showHowToUse, setShowHowToUse] = useState(false); // Página de Ajuda
 
-  // Modais
+  // Moais estados
   const [modalAddOpen, setModalAddOpen] = useState(false);
   const [modalDetalhesOpen, setModalDetalhesOpen] = useState(false);
   const [exercicioSelecionado, setExercicioSelecionado] = useState<Exercicio | null>(null);
@@ -30,22 +48,16 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
   const [modalNovaRotinaOpen, setModalNovaRotinaOpen] = useState(false);
   const [nomeNovaRotina, setNomeNovaRotina] = useState('');
 
-  // Navegação
-  const [showHowToUse, setShowHowToUse] = useState(false);
-
-// --- REF PARA DRAG AND DROP ---
+  // Refs para drag and drop
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
 
-  // --- BUSCAR DADOS ---
   useEffect(() => {
     if (!supabase) return;
     async function fetchDados() {
-      // Exercícios (Públicos)
       const { data: exData } = await supabase!.from('exercicios_normalizados').select('*');
       if (exData) setExercicios(exData);
 
-      // Rotinas (Filtradas pelo Cliente)
       const { data: rotData } = await supabase!
         .from('rotinas_treino')
         .select('*')
@@ -55,7 +67,6 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
     fetchDados();
   }, [session.clientId]);
 
-  // Buscar Itens da Rotina Selecionada
   useEffect(() => {
     if (!supabase || !rotinaSelecionada) return;
     async function fetchItens() {
@@ -66,7 +77,9 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
         .order('ordem');
       
       if (data) {
-        const itensFormatados = data.map((item: any) => ({
+        const itensOrdenados = data.sort((a: any, b: any) => Number(a.ordem) - Number(b.ordem));
+        
+        const itensFormatados = itensOrdenados.map((item: any) => ({
           ...item,
           exercicio_detalhes: item.exercicios_normalizados
         }));
@@ -76,39 +89,31 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
     fetchItens();
   }, [rotinaSelecionada]);
 
+  // Drag and Drop
   const handleSort = async () => {
-    // 1. Cria uma cópia da lista atual
     let _itensRotina = [...itensRotina];
-
-    // 2. Remove o item arrastado e insere na nova posição
     if (dragItem.current === null || dragOverItem.current === null) return;
     
     const draggedItemContent = _itensRotina.splice(dragItem.current, 1)[0];
     _itensRotina.splice(dragOverItem.current, 0, draggedItemContent);
 
-    // 3. Reseta os refs
     dragItem.current = null;
     dragOverItem.current = null;
 
-    // 4. Atualiza o estado visualmente (Optimistic UI)
     setItensRotina(_itensRotina);
 
-    // 5. Salva no Supabase (Atualiza a ordem de todos)
-    // Dica: Para listas pequenas (<50 itens), atualizar tudo é mais seguro e fácil
     if(!supabase) return;
-
     const updates = _itensRotina.map((item, index) => ({
       id: item.id,
       ordem: index.toString(),
     }));
 
-    // Promise.all para enviar todas as atualizações em paralelo
     await Promise.all(updates.map(u => 
       supabase!.from('exercicios_rotina').update({ ordem: u.ordem }).eq('id', u.id)
     ));
   };
 
-  // --- AÇÕES DO SISTEMA ---
+  // Ações do sistema
   const criarRotina = async () => {
     if (!supabase || !nomeNovaRotina) return;
     const { data } = await supabase.from('rotinas_treino')
@@ -136,6 +141,7 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
       const novoItem = { ...data[0], exercicio_detalhes: exercicioSelecionado };
       setItensRotina([...itensRotina, novoItem]);
       setModalAddOpen(false);
+      // setMobileDetailsOpen(true); 
     }
   };
 
@@ -145,8 +151,9 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
     setItensRotina(itensRotina.filter(i => i.id !== id));
   };
 
-  // --- FILTROS ---
+  // Filtros e Helpers
   const gruposMusculares = Array.from(new Set(exercicios.map(ex => ex.grupo_muscular))).sort();
+  
   const exerciciosFiltrados = exercicios.filter(ex => {
     const matchBusca = ex.nome.toLowerCase().includes(termoBusca.toLowerCase());
     const matchGrupo = filtroGrupo ? ex.grupo_muscular === filtroGrupo : true;
@@ -154,55 +161,66 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
   });
 
   const abrirDetalhes = (ex: Exercicio) => { setExercicioSelecionado(ex); setModalDetalhesOpen(true); };
+  
   const abrirAdicionar = (ex: Exercicio) => {
     if(!rotinaSelecionada) return alert("Selecione uma rotina primeiro!");
     setExercicioSelecionado(ex);
     setModalAddOpen(true);
   };
 
+  // Renderização
   if (showHowToUse) {
-  return <HowToUse onBack={() => setShowHowToUse(false)} />;
+    return <HowToUse onBack={() => setShowHowToUse(false)} />;
   }
 
   return (
     <div className="app-container">
       {/* HEADER */}
       <header className="header">
-  <div className="logo"><Dumbbell className="text-primary" /> Rap<span>mind</span></div>
-  <div style={{display:'flex', alignItems:'center', gap:'1rem'}}>
-
-    {/* BOTÃO DE AJUDA */}
-    <button 
-      className="btn-icon" 
-      onClick={() => setShowHowToUse(true)} 
-      title="Como usar o Agente"
-      style={{color: 'var(--text-muted)', background: 'transparent'}}
-    >
-      <HelpCircle size={20} />
-    </button>
-
-    <div className="user-badge">{session.nome || session.email}</div>
-    <button className="btn-logout" onClick={onLogout} title="Sair"><X size={16}/></button>
-  </div>
-</header>
+        <div style={{display: 'flex', alignItems: 'center', gap: '1rem'}}>
+          {/* Botão Menu Mobile */}
+          <button className="btn-menu-mobile" onClick={() => setSidebarOpen(!sidebarOpen)}>
+            <Menu />
+          </button>
+          <div className="logo"><Dumbbell className="text-primary" /> Rap<span>mind</span></div>
+        </div>
+        
+        <div style={{display:'flex', alignItems:'center', gap:'1rem'}}>
+          <button onClick={() => setShowHowToUse(true)} className="btn-icon" style={{color: 'var(--text-muted)', background: 'transparent'}}>
+            <HelpCircle size={20} />
+          </button>
+          <div className="user-badge">{session.nome || session.email}</div>
+          <button className="btn-logout" onClick={onLogout}><X size={16}/></button>
+        </div>
+      </header>
 
       <div className="main">
+        {/* OVERLAY MOBILE */}
+        {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)}></div>}
+
         {/* SIDEBAR */}
-        <aside className="sidebar">
+        <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
           <div className="sidebar-header">
             <span>Minhas Rotinas</span>
             <button onClick={() => setModalNovaRotinaOpen(true)} className="btn-icon-add"><Plus size={20}/></button>
           </div>
           <div className="rotinas-list">
             {rotinas.map(rot => (
-              <div key={rot.id} className={`rotina-item ${rotinaSelecionada === rot.id ? 'active' : ''}`} onClick={() => setRotinaSelecionada(rot.id)}>
+              <div key={rot.id} 
+                className={`rotina-item ${rotinaSelecionada === rot.id ? 'active' : ''}`}
+                onClick={() => {
+                  setRotinaSelecionada(rot.id);
+                  setSidebarOpen(false); 
+                  setMobileDetailsOpen(true); 
+                }}
+              >
                 <span className="truncate">{rot.titulo}</span> {rotinaSelecionada === rot.id && <ChevronRight size={16} />}
               </div>
             ))}
           </div>
         </aside>
 
-        {/* CATALOGO */}
+        {/* CATÁLOGO */}
         <section className="catalog">
           <div className="catalog-header">
             <div className="search-wrapper">
@@ -216,6 +234,7 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
               ))}
             </div>
           </div>
+
           <div className="exercises-grid">
             {exerciciosFiltrados.map(ex => (
               <div key={ex.id} className="exercise-card">
@@ -228,32 +247,44 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
               </div>
             ))}
           </div>
+
+          {/* BOTÃO FLUTUANTE (FAB) - Só aparece no mobile quando painel minimizado */}
+          {rotinaSelecionada && !mobileDetailsOpen && (
+            <button className="fab-routine-counter" onClick={() => setMobileDetailsOpen(true)}>
+              <ShoppingBag size={20} /> 
+              <span>Ver Treino ({itensRotina.length})</span>
+            </button>
+          )}
         </section>
 
-        {/* PAINEL DIREITO: DETALHES DA ROTINA */}
+        {/* PAINEL DIREITO: DETALHES */}
         {rotinaSelecionada && (
-          <aside className="routine-details">
+          <aside className={`routine-details ${mobileDetailsOpen ? 'mobile-open' : ''}`}>
             <div className="routine-header">
               <div className="rh-title">
                 <h3>{rotinas.find(r => r.id === rotinaSelecionada)?.titulo}</h3>
                 <span className="routine-count">{itensRotina.length} exercícios</span>
               </div>
-              
-              {/* BOTÃO DE FECHAR O PAINEL */}
-              <button 
-                className="btn-close-panel" 
-                onClick={() => setRotinaSelecionada(null)} 
-                title="Fechar painel"
-              >
+              <button className="btn-close-panel" onClick={() => { setRotinaSelecionada(null); setMobileDetailsOpen(false); }}>
                 <X size={20} />
+              </button>
+            </div>
+
+            {/* BOTÃO MOBILE: Adicionar mais exercícios (Minimiza o painel) */}
+            <div className="mobile-only-block" style={{padding: '0 1rem 1rem'}}>
+              <button 
+                className="btn-primary full" 
+                onClick={() => setMobileDetailsOpen(false)}
+                style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8}}
+              >
+                <Plus size={18} /> Adicionar Exercícios
               </button>
             </div>
 
             <div className="routine-items-list">
               {itensRotina.map((item, index) => (
-                <div 
-                  key={item.id} 
-                  className="routine-item-card draggable"
+                <div key={item.id} 
+                  className="routine-item-card"
                   draggable
                   onDragStart={() => (dragItem.current = index)}
                   onDragEnter={() => (dragOverItem.current = index)}
@@ -262,7 +293,6 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
                 >
                   <div className="ric-header">
                     <div style={{display:'flex', gap:'8px', alignItems:'center'}}>
-                      {/* Ícone de Grip para indicar que pode arrastar */}
                       <GripVertical size={16} className="grip-icon" />
                       <strong>{item.exercicio_detalhes?.nome}</strong>
                     </div>
@@ -279,7 +309,6 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
       </div>
 
       {/* --- MODAIS --- */}
-      {/* 1. Modal Configuração Série */}
       {modalAddOpen && (
         <div className="overlay">
           <div className="modal">
@@ -294,7 +323,6 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
         </div>
       )}
 
-      {/* 2. Modal Detalhes/Video */}
       {modalDetalhesOpen && exercicioSelecionado && (
         <div className="overlay" onClick={() => setModalDetalhesOpen(false)}>
           <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
@@ -320,7 +348,6 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
         </div>
       )}
 
-      {/* 3. Modal Nova Rotina */}
       {modalNovaRotinaOpen && (
         <div className="overlay">
           <div className="modal">
