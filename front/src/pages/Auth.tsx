@@ -69,7 +69,7 @@ export function AuthPage({ onLoginSuccess }: AuthPageProps) {
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
-          <div className="logo large"><Dumbbell className="text-primary" size={32} /> Rep<span>mind</span></div>
+          <div className="logo large"><Dumbbell className="text-primary" size={32} /> Rep<span>Mind</span></div>
           <p>Acesse suas rotinas personalizadas</p>
         </div>
 

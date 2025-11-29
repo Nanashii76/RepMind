@@ -182,7 +182,7 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
           <button className="btn-menu-mobile" onClick={() => setSidebarOpen(!sidebarOpen)}>
             <Menu />
           </button>
-          <div className="logo"><Dumbbell className="text-primary" /> Rap<span>mind</span></div>
+          <div className="logo"><Dumbbell className="text-primary" /> Rep<span>Mind</span></div>
         </div>
         
         <div style={{display:'flex', alignItems:'center', gap:'1rem'}}>
