@@ -1,6 +1,3 @@
-// Precisamos importar React para retornar JSX
-import React from 'react';
-
 export const formatarDescricao = (texto: string) => {
   if (!texto) return "Sem descrição disponível.";
   
