@@ -10,7 +10,8 @@
 
 O objetivo é separar a **estratégia** (Web) da **execução** (WhatsApp), oferecendo uma experiência de "Personal Trainer de Bolso".
 
-[Acesse-aqui](rep-mind-v2.vercel.app/)
+Página home: [Acesse-aqui](https://repmindhomepage.vercel.app/)
+Página de rotinas: [Acesse-aqui](rep-mind-v2.vercel.app/)
 
 ---
 
