@@ -4,7 +4,7 @@ import {
   AreaChart, Area, BarChart, Bar, Radar, RadarChart, PolarGrid, 
   PolarAngleAxis, PolarRadiusAxis, ScatterChart, Scatter, LineChart, Line, Legend
 } from 'recharts';
-import { ArrowLeft, Trophy, Activity, Dumbbell, TrendingUp, Scale, BarChart2, Layers } from 'lucide-react';
+import { ArrowLeft, Trophy, Activity, Dumbbell, TrendingUp, BarChart2, Layers } from 'lucide-react';
 import { format, parseISO, startOfWeek } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { supabase } from '../lib/supabase';
