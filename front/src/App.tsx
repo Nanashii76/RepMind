@@ -23,7 +23,8 @@ export default function App() {
         token: storedToken,
         clientId: storedClient,
         email: storedEmail,
-        nome: storedNome || undefined
+        nome: storedNome || undefined,
+        clientName: ''
       });
     }
     setLoading(false);
