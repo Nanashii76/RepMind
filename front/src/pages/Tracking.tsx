@@ -4,7 +4,7 @@ import {
   AreaChart, Area, BarChart, Bar, Radar, RadarChart, PolarGrid,
   PolarAngleAxis, PolarRadiusAxis, LineChart, Line, Legend
 } from 'recharts';
-import { ArrowLeft, Activity, BarChart2, Calendar, ChevronDown, Layers } from 'lucide-react';
+import { ArrowLeft, Activity, BarChart2, Calendar, ChevronDown } from 'lucide-react';
 import { format, parseISO, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { supabase } from '../lib/supabase';
