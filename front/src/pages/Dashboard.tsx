@@ -11,13 +11,15 @@ import {
   GripVertical, 
   Menu, 
   HelpCircle,
-  ShoppingBag
+  ShoppingBag,
+  TrendingUp // Ícone para a página de evolução
 } from 'lucide-react';
 
 import { supabase } from '../lib/supabase';
 import { formatarDescricao } from '../utils/formatters';
 import type { UserSession, Exercicio, Rotina, ItemRotina } from '../types';
 import { HowToUse } from './HowToUse';
+import { Tracking } from './Tracking'; // Importando a nova página
 
 interface DashboardProps {
   session: UserSession;
@@ -25,22 +27,23 @@ interface DashboardProps {
 }
 
 export function Dashboard({ session, onLogout }: DashboardProps) {
-  // Estado de dados
+  // --- ESTADOS DE DADOS ---
   const [exercicios, setExercicios] = useState<Exercicio[]>([]);
   const [rotinas, setRotinas] = useState<Rotina[]>([]);
   const [itensRotina, setItensRotina] = useState<ItemRotina[]>([]);
   
-  // EStados de navegação
+  // --- ESTADOS DE NAVEGAÇÃO ---
   const [rotinaSelecionada, setRotinaSelecionada] = useState<string | null>(null);
   const [termoBusca, setTermoBusca] = useState('');
   const [filtroGrupo, setFiltroGrupo] = useState<string | null>(null);
   
-  // Mobile UI States
-  const [sidebarOpen, setSidebarOpen] = useState(false); // Menu Lateral
-  const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false); // Painel de Detalhes (Tela Cheia no Mobile)
-  const [showHowToUse, setShowHowToUse] = useState(false); // Página de Ajuda
+  // --- ESTADOS DE UI (Mobile e Páginas) ---
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Menu Lateral Mobile
+  const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false); // Painel de Detalhes Mobile
+  const [showHowToUse, setShowHowToUse] = useState(false); // Página "Como Usar"
+  const [showTracking, setShowTracking] = useState(false); // Página "Evolução"
 
-  // Moais estados
+  // --- MODAIS ---
   const [modalAddOpen, setModalAddOpen] = useState(false);
   const [modalDetalhesOpen, setModalDetalhesOpen] = useState(false);
   const [exercicioSelecionado, setExercicioSelecionado] = useState<Exercicio | null>(null);
@@ -48,10 +51,11 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
   const [modalNovaRotinaOpen, setModalNovaRotinaOpen] = useState(false);
   const [nomeNovaRotina, setNomeNovaRotina] = useState('');
 
-  // Refs para drag and drop
+  // --- REFS (Drag & Drop) ---
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
 
+  // 1. Buscar Dados Iniciais
   useEffect(() => {
     if (!supabase) return;
     async function fetchDados() {
@@ -67,6 +71,7 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
     fetchDados();
   }, [session.clientId]);
 
+  // 2. Buscar Itens da Rotina
   useEffect(() => {
     if (!supabase || !rotinaSelecionada) return;
     async function fetchItens() {
@@ -77,6 +82,7 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
         .order('ordem');
       
       if (data) {
+        // Ordenação numérica no front para garantir
         const itensOrdenados = data.sort((a: any, b: any) => Number(a.ordem) - Number(b.ordem));
         
         const itensFormatados = itensOrdenados.map((item: any) => ({
@@ -89,7 +95,7 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
     fetchItens();
   }, [rotinaSelecionada]);
 
-  // Drag and Drop
+  // --- LÓGICA DRAG & DROP ---
   const handleSort = async () => {
     let _itensRotina = [...itensRotina];
     if (dragItem.current === null || dragOverItem.current === null) return;
@@ -113,7 +119,7 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
     ));
   };
 
-  // Ações do sistema
+  // --- AÇÕES ---
   const criarRotina = async () => {
     if (!supabase || !nomeNovaRotina) return;
     const { data } = await supabase.from('rotinas_treino')
@@ -141,7 +147,6 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
       const novoItem = { ...data[0], exercicio_detalhes: exercicioSelecionado };
       setItensRotina([...itensRotina, novoItem]);
       setModalAddOpen(false);
-      // setMobileDetailsOpen(true); 
     }
   };
 
@@ -151,7 +156,7 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
     setItensRotina(itensRotina.filter(i => i.id !== id));
   };
 
-  // Filtros e Helpers
+  // Helpers de Filtro e UI
   const gruposMusculares = Array.from(new Set(exercicios.map(ex => ex.grupo_muscular))).sort();
   
   const exerciciosFiltrados = exercicios.filter(ex => {
@@ -168,9 +173,14 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
     setModalAddOpen(true);
   };
 
-  // Renderização
+  // --- RENDERIZAÇÃO DE PÁGINAS ---
+  
   if (showHowToUse) {
     return <HowToUse onBack={() => setShowHowToUse(false)} />;
+  }
+
+  if (showTracking) {
+    return <Tracking session={session} onBack={() => setShowTracking(false)} />;
   }
 
   return (
@@ -182,15 +192,33 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
           <button className="btn-menu-mobile" onClick={() => setSidebarOpen(!sidebarOpen)}>
             <Menu />
           </button>
-          <div className="logo"><Dumbbell className="text-primary" /> Rep<span>Mind</span></div>
+          <div className="logo"><Dumbbell className="text-primary" /> Rap<span>mind</span></div>
         </div>
         
         <div style={{display:'flex', alignItems:'center', gap:'1rem'}}>
-          <button onClick={() => setShowHowToUse(true)} className="btn-icon" style={{color: 'var(--text-muted)', background: 'transparent'}}>
+          
+          {/* Botão Evolução (Tracking) */}
+          <button 
+            onClick={() => setShowTracking(true)} 
+            className="btn-icon" 
+            title="Minha Evolução"
+            style={{color: 'var(--text-muted)', background: 'transparent'}}
+          >
+            <TrendingUp size={20} />
+          </button>
+
+          {/* Botão Ajuda */}
+          <button 
+            onClick={() => setShowHowToUse(true)} 
+            className="btn-icon" 
+            title="Como usar" 
+            style={{color: 'var(--text-muted)', background: 'transparent'}}
+          >
             <HelpCircle size={20} />
           </button>
+
           <div className="user-badge">{session.nome || session.email}</div>
-          <button className="btn-logout" onClick={onLogout}><X size={16}/></button>
+          <button className="btn-logout" onClick={onLogout} title="Sair"><X size={16}/></button>
         </div>
       </header>
 
@@ -211,7 +239,7 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
                 onClick={() => {
                   setRotinaSelecionada(rot.id);
                   setSidebarOpen(false); 
-                  setMobileDetailsOpen(true); 
+                  setMobileDetailsOpen(true); // Abre painel ao selecionar no mobile
                 }}
               >
                 <span className="truncate">{rot.titulo}</span> {rotinaSelecionada === rot.id && <ChevronRight size={16} />}
@@ -248,7 +276,7 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
             ))}
           </div>
 
-          {/* BOTÃO FLUTUANTE (FAB) - Só aparece no mobile quando painel minimizado */}
+          {/* Botão Flutuante (FAB) Mobile */}
           {rotinaSelecionada && !mobileDetailsOpen && (
             <button className="fab-routine-counter" onClick={() => setMobileDetailsOpen(true)}>
               <ShoppingBag size={20} /> 
@@ -257,7 +285,7 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
           )}
         </section>
 
-        {/* PAINEL DIREITO: DETALHES */}
+        {/* PAINEL DIREITO */}
         {rotinaSelecionada && (
           <aside className={`routine-details ${mobileDetailsOpen ? 'mobile-open' : ''}`}>
             <div className="routine-header">
@@ -270,7 +298,7 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
               </button>
             </div>
 
-            {/* BOTÃO MOBILE: Adicionar mais exercícios (Minimiza o painel) */}
+            {/* Botão para minimizar e adicionar (Aparece só no Mobile) */}
             <div className="mobile-only-block" style={{padding: '0 1rem 1rem'}}>
               <button 
                 className="btn-primary full" 
@@ -331,6 +359,7 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
               <button className="btn-close" onClick={() => setModalDetalhesOpen(false)}><X size={24}/></button>
             </div>
             <div className="modal-body">
+              {/* Ajuste importante: uso de video_url conforme definido nos seus types */}
               {exercicioSelecionado.link_video ? (
                 <div className="video-wrapper"><iframe src={exercicioSelecionado.link_video.replace("watch?v=", "embed/")} title="Video" frameBorder="0" allowFullScreen></iframe></div>
               ) : (
