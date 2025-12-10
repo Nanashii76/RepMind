@@ -1,44 +1,66 @@
 import { useState, useEffect } from 'react';
-import { 
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  AreaChart, Area, BarChart, Bar, Radar, RadarChart, PolarGrid, 
-  PolarAngleAxis, PolarRadiusAxis, ScatterChart, Scatter, LineChart, Line, Legend
+import {
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  AreaChart, Area, BarChart, Bar, Radar, RadarChart, PolarGrid,
+  PolarAngleAxis, PolarRadiusAxis, LineChart, Line, Legend
 } from 'recharts';
-import { ArrowLeft, Trophy, Activity, Dumbbell, TrendingUp, BarChart2, Layers } from 'lucide-react';
-import { format, parseISO, startOfWeek } from 'date-fns';
+import { ArrowLeft, Activity, BarChart2, Calendar, ChevronDown } from 'lucide-react';
+import { format, parseISO, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { supabase } from '../lib/supabase';
-import type { UserSession } from '../types';
+import type { UserSession, PeriodFilter } from '../types';
 
 interface TrackingProps {
   session: UserSession;
   onBack: () => void;
 }
 
-// Cores para diferenciar os meses no gráfico aranha
+// Cores para os meses no gráfico aranha
 const MONTH_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
 export function Tracking({ session, onBack }: TrackingProps) {
-  // --- DADOS GERAIS ---
-  const [totalVolume, setTotalVolume] = useState(0);
-  const [totalTreinos, setTotalTreinos] = useState(0);
+  const [periodoFiltro, setPeriodoFiltro] = useState<PeriodFilter>('semana');
+  const [diasPeriodo, setDiasPeriodo] = useState(90);
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  // Estados dos Cards
+  const [cargaMediaPercent, setCargaMediaPercent] = useState(0);
+  const [volumeSemanalPercent, setVolumeSemanalPercent] = useState(0);
+  const [intensidadePercent, setIntensidadePercent] = useState(0);
+  const [gruposMusculares, setGruposMusculares] = useState(0);
+
+  // Estados dos Gráficos
   const [volumeSemanal, setVolumeSemanal] = useState<any[]>([]);
-  const [intensidadeMedia, setIntensidadeMedia] = useState<any[]>([]);
+  const [intensidadeData, setIntensidadeData] = useState<any[]>([]);
   
-  // --- DADOS RADAR (COMPARATIVO) ---
+  // --- NOVO: Estados para o Radar Comparativo ---
   const [dadosRadar, setDadosRadar] = useState<any[]>([]);
   const [mesesDisponiveis, setMesesDisponiveis] = useState<string[]>([]);
   const [mesesSelecionados, setMesesSelecionados] = useState<string[]>([]);
-  
-  // --- DADOS ESPECÍFICOS ---
+
+  // Estados Específicos
   const [exerciciosLista, setExerciciosLista] = useState<{id:string, nome:string}[]>([]);
   const [exercicioSelecionado, setExercicioSelecionado] = useState<string>('');
   const [evolucaoCarga, setEvolucaoCarga] = useState<any[]>([]);
-  const [dispersaoRepxCarga, setDispersaoRepxCarga] = useState<any[]>([]);
 
-  // 1. BUSCAR E PROCESSAR TUDO
+  const periodos = [
+    { value: 'dia', label: 'Dia', dias: 1 },
+    { value: 'semana', label: 'Semana', dias: 7 },
+    { value: 'mes', label: 'Mês', dias: 30 },
+    { value: 'ano', label: 'Ano', dias: 365 },
+    { value: 'personalizado', label: 'Personalizado', dias: 90 },
+  ];
+
+  useEffect(() => {
+    const periodo = periodos.find(p => p.value === periodoFiltro);
+    if (periodo) setDiasPeriodo(periodo.dias);
+  }, [periodoFiltro]);
+
+  // BUSCA DADOS GERAIS
   useEffect(() => {
     async function fetchGeral() {
+      const dataInicio = format(subDays(new Date(), diasPeriodo), 'yyyy-MM-dd');
+
       const { data: sessoes } = await supabase!
         .from('sessao_treino')
         .select(`
@@ -49,282 +71,315 @@ export function Tracking({ session, onBack }: TrackingProps) {
           )
         `)
         .eq('cliente_id', session.clientId)
+        .gte('data_sessao', dataInicio)
         .order('data_sessao', { ascending: true });
 
-      if (!sessoes) return;
+      if (!sessoes || sessoes.length === 0) return;
 
-      let volTotalVida = 0;
       const mapSemana = new Map();
       const mapIntensidade = new Map();
       const mapExercicios = new Map();
       
-      // Estruturas para o Radar (Mês -> Músculo -> Contagem)
-      const radarMap: Record<string, Record<string, number>> = {};
+      // Estrutura para o Radar: { "Peito": { "Jan": 5, "Fev": 8 }, ... }
+      const radarMapMensal: Record<string, Record<string, number>> = {};
       const mesesSet = new Set<string>();
+
+      let totalCarga = 0;
+      let totalSeries = 0;
+      let somatorioIntensidade = 0;
+      let diasComTreino = 0;
 
       sessoes.forEach(s => {
         const dataIso = parseISO(s.data_sessao);
-        const semanaKey = format(startOfWeek(dataIso), 'dd/MMM', { locale: ptBR });
-        const mesKey = format(dataIso, 'MMM/yy', { locale: ptBR });
-        
+        const diaKey = format(dataIso, 'EEE', { locale: ptBR }).charAt(0).toUpperCase();
+        // Chave do Mês para o Radar (ex: "Jan", "Fev")
+        const mesKey = format(dataIso, 'MMM', { locale: ptBR }).charAt(0).toUpperCase() + format(dataIso, 'MMM', { locale: ptBR }).slice(1);
         mesesSet.add(mesKey);
 
         let volDia = 0;
         let repsDia = 0;
+        let cargaDia = 0;
 
         s.series_log.forEach((log: any) => {
           const carga = Number(log.carga_kg) || 0;
           const reps = Number(log.repeticoes_executadas) || 0;
           const musculo = log.exercicios_normalizados?.grupo_muscular || 'Geral';
-          
+
           const volSerie = carga * reps;
           volDia += volSerie;
           repsDia += reps;
-          volTotalVida += volSerie;
+          cargaDia += carga;
+          totalSeries += 1;
 
-          // Popula Radar (Séries por Músculo por Mês)
-          if (!radarMap[musculo]) radarMap[musculo] = {};
-          if (!radarMap[musculo][mesKey]) radarMap[musculo][mesKey] = 0;
-          radarMap[musculo][mesKey] += 1; // Conta +1 série
+          // Popula Radar por Mês
+          if (!radarMapMensal[musculo]) radarMapMensal[musculo] = {};
+          if (!radarMapMensal[musculo][mesKey]) radarMapMensal[musculo][mesKey] = 0;
+          radarMapMensal[musculo][mesKey] += 1; // Contagem de séries
 
-          // Lista de Exercícios
           if (log.exercicios_normalizados?.id) {
             mapExercicios.set(log.exercicios_normalizados.id, log.exercicios_normalizados.nome);
           }
         });
 
-        // Volume Semanal
-        mapSemana.set(semanaKey, (mapSemana.get(semanaKey) || 0) + volDia);
+        totalCarga += cargaDia;
+        mapSemana.set(diaKey, (mapSemana.get(diaKey) || 0) + volDia);
 
-        // Intensidade
         if (repsDia > 0) {
           const intensidade = Math.round(volDia / repsDia);
-          mapIntensidade.set(semanaKey, intensidade);
+          mapIntensidade.set(diaKey, intensidade);
+          somatorioIntensidade += intensidade;
+          diasComTreino += 1;
         }
       });
 
-      // --- FINALIZA RADAR ---
-      const mesesArray = Array.from(mesesSet);
-      const dadosRadarFinal = Object.keys(radarMap).map(musculo => {
-        const entry: any = { subject: musculo, fullMark: 100 }; // fullMark é só referência
-        mesesArray.forEach(m => {
-          entry[m] = radarMap[musculo][m] || 0;
+      // --- Processamento dos Cards ---
+      const cargaMedia = totalSeries > 0 ? totalCarga / totalSeries : 0;
+      const volumeTotal = Array.from(mapSemana.values()).reduce((a, b) => a + b, 0);
+      const intensidadeMedia = diasComTreino > 0 ? somatorioIntensidade / diasComTreino : 0;
+      
+      setCargaMediaPercent(Math.round((cargaMedia / 100) * 100));
+      setVolumeSemanalPercent(Math.round((volumeTotal / 10000) * 100));
+      setIntensidadePercent(Math.round((intensidadeMedia / 100) * 100));
+      setGruposMusculares(Object.keys(radarMapMensal).length);
+
+      // --- Processamento Gráficos Lineares ---
+      const diasOrdem = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+      setVolumeSemanal(diasOrdem.map(dia => ({ name: dia, vol: mapSemana.get(dia) || 0 })));
+      setIntensidadeData(diasOrdem.map(dia => ({ name: dia, int: mapIntensidade.get(dia) || 0 })));
+
+      // --- Processamento Radar (Comparativo) ---
+      const listaMeses = Array.from(mesesSet);
+      const dadosRadarFinal = Object.keys(radarMapMensal).map(musculo => {
+        const entry: any = { subject: musculo, fullMark: 100 };
+        listaMeses.forEach(m => {
+          entry[m] = radarMapMensal[musculo][m] || 0;
         });
         return entry;
       });
 
-      // Estados Gerais
-      setTotalVolume(volTotalVida);
-      setTotalTreinos(sessoes.length);
-      setVolumeSemanal(Array.from(mapSemana, ([name, vol]) => ({ name, vol })));
-      setIntensidadeMedia(Array.from(mapIntensidade, ([name, int]) => ({ name, int })));
-      
-      // Estados Radar
+      setMesesDisponiveis(listaMeses);
+      // Seleciona por padrão o último mês (ou os 2 últimos se houver)
+      if (listaMeses.length > 0) {
+        setMesesSelecionados(listaMeses.slice(-2)); 
+      }
       setDadosRadar(dadosRadarFinal);
-      setMesesDisponiveis(mesesArray);
-      setMesesSelecionados(mesesArray.slice(-2)); // Seleciona os 2 últimos por padrão
 
-      // Estados Específicos
+      // Dropdown de Exercícios
       const listaEx = Array.from(mapExercicios, ([id, nome]) => ({ id, nome }));
       setExerciciosLista(listaEx);
       if (listaEx.length > 0 && !exercicioSelecionado) setExercicioSelecionado(listaEx[0].id);
     }
-    fetchGeral();
-  }, [session.clientId]);
 
-  // 2. BUSCAR DADOS ESPECÍFICOS
+    if (session.clientId) fetchGeral();
+  }, [session.clientId, diasPeriodo]);
+
+  // BUSCA DADOS ESPECÍFICOS
   useEffect(() => {
     if (!exercicioSelecionado) return;
 
     async function fetchEspecifico() {
+      const dataInicio = format(subDays(new Date(), diasPeriodo), 'yyyy-MM-dd');
       const { data } = await supabase!
         .from('series_log')
-        .select(`carga_kg, repeticoes_executadas, sessao_treino!inner(data_sessao)`)
+        .select(`carga_kg, sessao_treino!inner(data_sessao, cliente_id)`)
         .eq('sessao_treino.cliente_id', session.clientId)
         .eq('exercicio_id', exercicioSelecionado)
+        .gte('sessao_treino.data_sessao', dataInicio)
         .order('sessao_treino(data_sessao)', { ascending: true });
 
       if (data) {
         const mapEvolucao = new Map();
-        const arrayDispersao: any[] = [];
-
         data.forEach((log: any) => {
           const dataFormatada = format(parseISO(log.sessao_treino.data_sessao), 'dd/MM');
           const carga = Number(log.carga_kg);
-          const reps = Number(log.repeticoes_executadas);
-
           if (!mapEvolucao.has(dataFormatada) || carga > mapEvolucao.get(dataFormatada)) {
             mapEvolucao.set(dataFormatada, carga);
           }
-          arrayDispersao.push({ x: carga, y: reps, z: 1 });
         });
-
         setEvolucaoCarga(Array.from(mapEvolucao, ([data, carga]) => ({ data, carga })));
-        setDispersaoRepxCarga(arrayDispersao);
       }
     }
     fetchEspecifico();
-  }, [exercicioSelecionado]);
+  }, [exercicioSelecionado, diasPeriodo, session.clientId]);
 
-  // Helper Radar
+  // Toggle para o gráfico de Radar
   const toggleMes = (mes: string) => {
     if (mesesSelecionados.includes(mes)) {
       setMesesSelecionados(mesesSelecionados.filter(m => m !== mes));
     } else {
-      if (mesesSelecionados.length >= 3) return alert("Selecione no máximo 3 meses para comparar.");
+      if (mesesSelecionados.length >= 3) {
+        alert("Selecione no máximo 3 meses para comparar.");
+        return;
+      }
       setMesesSelecionados([...mesesSelecionados, mes]);
     }
   };
 
-  const formatPeso = (val: number) => val > 1000 ? `${(val/1000).toFixed(1)}t` : `${val}kg`;
-
   return (
-    <div className="app-container">
-      <header className="header">
-        <button onClick={onBack} className="btn-secondary" style={{width:'auto', display:'flex', gap:5}}>
-          <ArrowLeft size={18} /> Voltar
+    <div className="tracking-container">
+      <header className="tracking-header">
+        <button onClick={onBack} className="back-button">
+          <ArrowLeft size={20} />
         </button>
-        <div className="logo">Analytics</div>
-        <div style={{width: 80}}></div>
+        <div className="header-center">
+          <h1 className="header-title">Sua Evolução</h1>
+          <p className="header-subtitle">Últimos {diasPeriodo} dias</p>
+        </div>
+        <button className="calendar-button"><Calendar size={24} /></button>
       </header>
 
-      <div className="main" style={{flexDirection: 'column', padding: '1.5rem', overflowY: 'auto', gap: '2rem'}}>
-        
-        {/* 1. PERFORMANCE GERAL */}
-        <section>
+      {/* Filtros de Período */}
+      <div className="period-filters">
+        {periodos.filter(p => p.value !== 'personalizado').map(periodo => (
+          <button
+            key={periodo.value}
+            className={`period-tab ${periodoFiltro === periodo.value ? 'active' : ''}`}
+            onClick={() => setPeriodoFiltro(periodo.value as PeriodFilter)}
+          >
+            {periodo.label}
+          </button>
+        ))}
+        <div className="dropdown-container">
+          <button
+            className={`period-tab ${periodoFiltro === 'personalizado' ? 'active' : ''}`}
+            onClick={() => setShowDropdown(!showDropdown)}
+          >
+            Personalizado <ChevronDown size={16} />
+          </button>
+          {showDropdown && (
+            <div className="dropdown-menu">
+              {[30, 60, 90, 180].map(d => (
+                <button key={d} onClick={() => { setDiasPeriodo(d); setPeriodoFiltro('personalizado'); setShowDropdown(false); }}>
+                  {d} dias
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="content-scroll">
+        <section className="performance-section">
           <h3 className="section-title">Performance Geral</h3>
           <div className="stats-grid">
-            <div className="stat-card highlight">
-              <div className="icon-box"><Dumbbell size={24} color="#3b82f6" /></div>
-              <div><p>Volume Total</p><h3>{formatPeso(totalVolume)}</h3></div>
+            <div className="stat-card">
+              <div className="stat-icon blue"><div className="icon-bars"></div></div>
+              <div className="stat-content"><h2 className="stat-value">{cargaMediaPercent}%</h2><p className="stat-label">Carga média</p></div>
             </div>
             <div className="stat-card">
-              <div className="icon-box"><Trophy size={24} color="#fbbf24" /></div>
-              <div><p>Treinos Realizados</p><h3>{totalTreinos}</h3></div>
+              <div className="stat-icon blue"><BarChart2 size={24} /></div>
+              <div className="stat-content"><h2 className="stat-value">{volumeSemanalPercent}%</h2><p className="stat-label">Volume semanal</p></div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-icon blue"><Activity size={24} /></div>
+              <div className="stat-content"><h2 className="stat-value">{intensidadePercent}%</h2><p className="stat-label">Intensidade</p></div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-content full"><h2 className="stat-value">{gruposMusculares}</h2><p className="stat-label">grupos musculares</p></div>
             </div>
           </div>
         </section>
 
-        {/* 2. VOLUME E INTENSIDADE */}
-        <section className="charts-grid-2">
-          <div className="chart-card">
-            <div className="chart-header"><BarChart2 size={18} className="text-primary"/><h4>Volume Semanal</h4></div>
-            <div style={{ width: '100%', height: 250 }}>
-              <ResponsiveContainer>
-                <BarChart data={volumeSemanal}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-                  <XAxis dataKey="name" stroke="#94a3b8" tick={{fontSize:10}} />
-                  <Tooltip cursor={{fill: '#334155', opacity: 0.4}} contentStyle={{backgroundColor: '#1e293b', border: '1px solid #334155'}} />
-                  <Bar dataKey="vol" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Volume (kg)" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          <div className="chart-card">
-            <div className="chart-header"><Activity size={18} className="text-primary"/><h4>Intensidade Média</h4></div>
-            <div style={{ width: '100%', height: 250 }}>
-              <ResponsiveContainer>
-                <LineChart data={intensidadeMedia}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-                  <XAxis dataKey="name" stroke="#94a3b8" tick={{fontSize:10}} />
-                  <YAxis stroke="#94a3b8" tick={{fontSize:10}} domain={['dataMin - 5', 'auto']} />
-                  <Tooltip contentStyle={{backgroundColor: '#1e293b', border: '1px solid #334155'}} />
-                  <Line type="monotone" dataKey="int" stroke="#f59e0b" strokeWidth={2} dot={{r:4}} name="Média (kg)" />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </section>
-
-        {/* 3. DISTRIBUIÇÃO MUSCULAR (COMPARATIVO) */}
-        <section>
-          <div className="chart-card full-width">
-            <div className="chart-header-control">
-              <div className="title-group"><Layers size={18} className="text-primary"/><h4>Comparativo Muscular</h4></div>
-              
-              {/* Seletor de Meses */}
-              <div className="month-selector">
-                {mesesDisponiveis.map(mes => (
-                  <button 
-                    key={mes}
-                    className={`month-chip ${mesesSelecionados.includes(mes) ? 'active' : ''}`}
-                    onClick={() => toggleMes(mes)}
-                  >
-                    {mes}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div style={{ width: '100%', height: 350 }}>
-              <ResponsiveContainer>
-                <RadarChart cx="50%" cy="50%" outerRadius="70%" data={dadosRadar}>
-                  <PolarGrid stroke="#334155" />
-                  <PolarAngleAxis dataKey="subject" tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 'bold' }} />
-                  <PolarRadiusAxis angle={30} domain={[0, 'auto']} tick={false} axisLine={false} />
-                  
-                  {mesesSelecionados.map((mes, index) => (
-                    <Radar
-                      key={mes}
-                      name={mes}
-                      dataKey={mes}
-                      stroke={MONTH_COLORS[index % MONTH_COLORS.length]}
-                      strokeWidth={3}
-                      fill={MONTH_COLORS[index % MONTH_COLORS.length]}
-                      fillOpacity={0.3}
-                    />
-                  ))}
-                  
-                  <Tooltip contentStyle={{backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px'}} itemStyle={{color:'#fff'}} />
-                  <Legend />
-                </RadarChart>
-              </ResponsiveContainer>
-              {mesesSelecionados.length === 0 && <p className="no-data" style={{textAlign:'center', marginTop:-180}}>Selecione meses acima</p>}
-            </div>
-          </div>
-        </section>
-
-        {/* 4. ANÁLISE POR EXERCÍCIO */}
-        <section>
-          <div className="section-header-row">
-            <h3 className="section-title">Análise Detalhada</h3>
-            <select className="chart-select" value={exercicioSelecionado} onChange={e => setExercicioSelecionado(e.target.value)}>
+        {/* GRÁFICOS DE LINHA */}
+        <section className="chart-section">
+          <div className="chart-header-with-select">
+            <h4 className="chart-title">Carga por exercício</h4>
+            <select className="exercise-select" value={exercicioSelecionado} onChange={e => setExercicioSelecionado(e.target.value)}>
               {exerciciosLista.map(ex => <option key={ex.id} value={ex.id}>{ex.nome}</option>)}
             </select>
           </div>
+          <div className="chart-container small">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={evolucaoCarga}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                <XAxis dataKey="data" stroke="#64748b" tick={{fontSize:11, fill:'#64748b'}} />
+                <YAxis stroke="#64748b" tick={{fontSize:11, fill:'#64748b'}} domain={['auto', 'auto']} />
+                <Tooltip contentStyle={{backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px'}} labelStyle={{color: '#94a3b8'}} />
+                <Line type="monotone" dataKey="carga" stroke="#3b82f6" strokeWidth={3} dot={{r:3, fill:'#3b82f6'}} name="Carga (kg)" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
 
-          <div className="charts-grid-2">
-            <div className="chart-card">
-              <div className="chart-header"><TrendingUp size={18} className="text-primary"/><h4>Evolução de Carga</h4></div>
-              <div style={{ width: '100%', height: 250 }}>
-                <ResponsiveContainer>
-                  <AreaChart data={evolucaoCarga}>
-                    <defs><linearGradient id="colEvo" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3b82f6" stopOpacity={0.6}/><stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/></linearGradient></defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-                    <XAxis dataKey="data" stroke="#94a3b8" tick={{fontSize:10}} />
-                    <YAxis stroke="#94a3b8" tick={{fontSize:10}} domain={['dataMin - 5', 'auto']} />
-                    <Tooltip contentStyle={{backgroundColor: '#1e293b', border: '1px solid #334155'}} />
-                    <Area type="monotone" dataKey="carga" stroke="#3b82f6" fill="url(#colEvo)" name="Máx (kg)" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
+        {/* GRÁFICOS DE BARRAS E ÁREA */}
+        <div className="dual-chart-grid">
+          <section className="chart-section">
+            <h4 className="chart-title">Volume semanal</h4>
+            <div className="chart-container small">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={volumeSemanal}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                  <XAxis dataKey="name" stroke="#64748b" tick={{fontSize:11, fill:'#64748b'}} />
+                  <Tooltip contentStyle={{backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px'}} labelStyle={{color: '#94a3b8'}} cursor={{fill: '#1e293b', opacity: 0.5}} />
+                  <Bar dataKey="vol" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
+          </section>
 
-            <div className="chart-card">
-              <div className="chart-header"><Activity size={18} className="text-primary"/><h4>Peso x Repetições</h4></div>
-              <div style={{ width: '100%', height: 250 }}>
-                <ResponsiveContainer>
-                  <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                    <XAxis type="number" dataKey="x" name="Carga" unit="kg" stroke="#94a3b8" tick={{fontSize:10}} />
-                    <YAxis type="number" dataKey="y" name="Reps" stroke="#94a3b8" tick={{fontSize:10}} />
-                    <Tooltip cursor={{ strokeDasharray: '3 3' }} contentStyle={{backgroundColor: '#1e293b', border: '1px solid #334155'}} />
-                    <Scatter name="Séries" data={dispersaoRepxCarga} fill="#ef4444" />
-                  </ScatterChart>
-                </ResponsiveContainer>
-              </div>
+          <section className="chart-section">
+            <h4 className="chart-title">Intensidade</h4>
+            <div className="chart-container small">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={intensidadeData}>
+                  <defs><linearGradient id="colorInt" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3b82f6" stopOpacity={0.5}/><stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/></linearGradient></defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                  <XAxis dataKey="name" stroke="#64748b" tick={{fontSize:11, fill:'#64748b'}} />
+                  <YAxis stroke="#64748b" tick={{fontSize:11, fill:'#64748b'}} domain={['auto', 'auto']} />
+                  <Tooltip contentStyle={{backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px'}} labelStyle={{color: '#94a3b8'}} />
+                  <Area type="monotone" dataKey="int" stroke="#3b82f6" strokeWidth={2} fill="url(#colorInt)" />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
+          </section>
+        </div>
+
+        {/* --- GRÁFICO DE RADAR COM COMPARAÇÃO --- */}
+        <section className="chart-section">
+          <div className="chart-header-with-select" style={{justifyContent: 'flex-start', gap: '1rem'}}>
+            <h4 className="chart-title">Comparativo Muscular</h4>
+            {/* Seletor de Meses */}
+            <div className="month-selector">
+              {mesesDisponiveis.map(mes => (
+                <button 
+                  key={mes}
+                  className={`month-chip ${mesesSelecionados.includes(mes) ? 'active' : ''}`}
+                  onClick={() => toggleMes(mes)}
+                >
+                  {mes}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="chart-container small" style={{height: 350}}>
+            <ResponsiveContainer width="100%" height="100%">
+              <RadarChart cx="50%" cy="50%" outerRadius="65%" data={dadosRadar}>
+                <PolarGrid stroke="#1e293b" />
+                <PolarAngleAxis dataKey="subject" tick={{ fill: '#94a3b8', fontSize: 11 }} />
+                <PolarRadiusAxis angle={30} domain={[0, 'auto']} tick={false} axisLine={false} />
+                
+                {/* Renderiza um Radar para cada mês selecionado */}
+                {mesesSelecionados.map((mes, index) => (
+                  <Radar
+                    key={mes}
+                    name={mes}
+                    dataKey={mes}
+                    stroke={MONTH_COLORS[index % MONTH_COLORS.length]}
+                    strokeWidth={2}
+                    fill={MONTH_COLORS[index % MONTH_COLORS.length]}
+                    fillOpacity={0.3}
+                  />
+                ))}
+                
+                <Tooltip 
+                  contentStyle={{backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px'}}
+                  itemStyle={{color: '#fff'}}
+                />
+                <Legend />
+              </RadarChart>
+            </ResponsiveContainer>
+            {mesesSelecionados.length === 0 && <p style={{textAlign: 'center', color: '#64748b', fontSize: '0.8rem', marginTop: -20}}>Selecione meses acima para comparar</p>}
           </div>
         </section>
 

@@ -53,7 +53,8 @@ export function AuthPage({ onLoginSuccess }: AuthPageProps) {
           token: data.token,
           clientId: data.clientId,
           email: email,
-          nome: data.nome
+          nome: data.nome || data.name,
+          clientName: ''
         });
       } else {
         setError("Código inválido.");
