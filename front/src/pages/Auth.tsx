@@ -21,10 +21,13 @@ export function AuthPage({ onLoginSuccess }: AuthPageProps) {
     setLoading(true); setError('');
     
     try {
+      // O email já está em minúsculo pelo onChange, mas garantimos aqui também por segurança
+      const emailLower = email.toLowerCase().trim();
+
       const res = await fetch(WEBHOOK_AUTH, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
+        body: JSON.stringify({ email: emailLower })
       });
       if (res.ok) setStep('code');
       else setError("Erro ao enviar. Verifique o email.");
@@ -40,10 +43,12 @@ export function AuthPage({ onLoginSuccess }: AuthPageProps) {
     setLoading(true); setError('');
 
     try {
+      const emailLower = email.toLowerCase().trim();
+
       const res = await fetch(WEBHOOK_VERIFY, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code })
+        body: JSON.stringify({ email: emailLower, code })
       });
       
       const data = await res.json();
@@ -52,7 +57,7 @@ export function AuthPage({ onLoginSuccess }: AuthPageProps) {
         onLoginSuccess({
           token: data.token,
           clientId: data.clientId,
-          email: email,
+          email: emailLower,
           nome: data.nome || data.name,
           clientName: ''
         });
@@ -81,9 +86,13 @@ export function AuthPage({ onLoginSuccess }: AuthPageProps) {
             <div className="input-with-icon">
               <Mail size={18} />
               <input 
-                type="email" placeholder="seu@email.com" 
-                value={email} onChange={e => setEmail(e.target.value)} 
-                autoFocus onKeyDown={e => e.key === 'Enter' && handleSendEmail()}
+                type="email" 
+                placeholder="seu@email.com" 
+                value={email} 
+                // AQUI ESTÁ A MUDANÇA PRINCIPAL:
+                onChange={e => setEmail(e.target.value.toLowerCase())} 
+                autoFocus 
+                onKeyDown={e => e.key === 'Enter' && handleSendEmail()}
               />
             </div>
             <button className="btn-primary full" onClick={handleSendEmail} disabled={loading}>
