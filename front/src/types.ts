@@ -1,6 +1,7 @@
 export interface UserSession { 
   token: string; 
-  clientId: string; 
+  clientId: string;
+  clientName: string; 
   email: string; 
   nome?: string; 
 }
@@ -31,3 +32,5 @@ export interface ItemRotina {
   exercicios_normalizados?: Exercicio;
   exercicio_detalhes?: Exercicio; // Helper para o frontend
 }
+
+export type PeriodFilter = 'dia' | 'semana' | 'mes' | 'ano' | 'personalizado';
