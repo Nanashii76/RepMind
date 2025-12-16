@@ -21,7 +21,6 @@ export function AuthPage({ onLoginSuccess }: AuthPageProps) {
     setLoading(true); setError('');
     
     try {
-      // O email já está em minúsculo pelo onChange, mas garantimos aqui também por segurança
       const emailLower = email.toLowerCase().trim();
 
       const res = await fetch(WEBHOOK_AUTH, {
@@ -89,7 +88,6 @@ export function AuthPage({ onLoginSuccess }: AuthPageProps) {
                 type="email" 
                 placeholder="seu@email.com" 
                 value={email} 
-                // AQUI ESTÁ A MUDANÇA PRINCIPAL:
                 onChange={e => setEmail(e.target.value.toLowerCase())} 
                 autoFocus 
                 onKeyDown={e => e.key === 'Enter' && handleSendEmail()}

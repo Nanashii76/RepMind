@@ -10,16 +10,14 @@ import {
   X, 
   GripVertical, 
   Menu, 
-  HelpCircle,
   ShoppingBag,
-  TrendingUp // Ícone para a página de evolução
+  TrendingUp
 } from 'lucide-react';
 
 import { supabase } from '../lib/supabase';
 import { formatarDescricao } from '../utils/formatters';
 import type { UserSession, Exercicio, Rotina, ItemRotina } from '../types';
-import { HowToUse } from './HowToUse';
-import { Tracking } from './Tracking'; // Importando a nova página
+import { Tracking } from './Tracking';
 
 interface DashboardProps {
   session: UserSession;
@@ -27,23 +25,20 @@ interface DashboardProps {
 }
 
 export function Dashboard({ session, onLogout }: DashboardProps) {
-  // --- ESTADOS DE DADOS ---
   const [exercicios, setExercicios] = useState<Exercicio[]>([]);
   const [rotinas, setRotinas] = useState<Rotina[]>([]);
   const [itensRotina, setItensRotina] = useState<ItemRotina[]>([]);
   
-  // --- ESTADOS DE NAVEGAÇÃO ---
   const [rotinaSelecionada, setRotinaSelecionada] = useState<string | null>(null);
   const [termoBusca, setTermoBusca] = useState('');
   const [filtroGrupo, setFiltroGrupo] = useState<string | null>(null);
   
-  // --- ESTADOS DE UI (Mobile e Páginas) ---
-  const [sidebarOpen, setSidebarOpen] = useState(false); // Menu Lateral Mobile
-  const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false); // Painel de Detalhes Mobile
-  const [showHowToUse, setShowHowToUse] = useState(false); // Página "Como Usar"
-  const [showTracking, setShowTracking] = useState(false); // Página "Evolução"
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false);
+  const [showTracking, setShowTracking] = useState(false);
 
-  // --- MODAIS ---
+  const [highlightSidebar, setHighlightSidebar] = useState(false);
+
   const [modalAddOpen, setModalAddOpen] = useState(false);
   const [modalDetalhesOpen, setModalDetalhesOpen] = useState(false);
   const [exercicioSelecionado, setExercicioSelecionado] = useState<Exercicio | null>(null);
@@ -51,11 +46,9 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
   const [modalNovaRotinaOpen, setModalNovaRotinaOpen] = useState(false);
   const [nomeNovaRotina, setNomeNovaRotina] = useState('');
 
-  // --- REFS (Drag & Drop) ---
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
 
-  // 1. Buscar Dados Iniciais
   useEffect(() => {
     if (!supabase) return;
     async function fetchDados() {
@@ -71,7 +64,6 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
     fetchDados();
   }, [session.clientId]);
 
-  // 2. Buscar Itens da Rotina
   useEffect(() => {
     if (!supabase || !rotinaSelecionada) return;
     async function fetchItens() {
@@ -82,9 +74,7 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
         .order('ordem');
       
       if (data) {
-        // Ordenação numérica no front para garantir
         const itensOrdenados = data.sort((a: any, b: any) => Number(a.ordem) - Number(b.ordem));
-        
         const itensFormatados = itensOrdenados.map((item: any) => ({
           ...item,
           exercicio_detalhes: item.exercicios_normalizados
@@ -95,7 +85,6 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
     fetchItens();
   }, [rotinaSelecionada]);
 
-  // --- LÓGICA DRAG & DROP ---
   const handleSort = async () => {
     let _itensRotina = [...itensRotina];
     if (dragItem.current === null || dragOverItem.current === null) return;
@@ -119,7 +108,6 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
     ));
   };
 
-  // --- AÇÕES ---
   const criarRotina = async () => {
     if (!supabase || !nomeNovaRotina) return;
     const { data } = await supabase.from('rotinas_treino')
@@ -129,7 +117,21 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
       setRotinas([...rotinas, data[0]]);
       setModalNovaRotinaOpen(false);
       setNomeNovaRotina('');
+      setRotinaSelecionada(data[0].id);
+      setHighlightSidebar(false);
     }
+  };
+
+  const abrirAdicionar = (ex: Exercicio) => {
+    if(!rotinaSelecionada) {
+      setHighlightSidebar(true);
+      setSidebarOpen(true);
+      setTimeout(() => setHighlightSidebar(false), 2500);
+      
+      return; 
+    }
+    setExercicioSelecionado(ex);
+    setModalAddOpen(true);
   };
 
   const adicionarExercicio = async () => {
@@ -156,7 +158,6 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
     setItensRotina(itensRotina.filter(i => i.id !== id));
   };
 
-  // Helpers de Filtro e UI
   const gruposMusculares = Array.from(new Set(exercicios.map(ex => ex.grupo_muscular))).sort();
   
   const exerciciosFiltrados = exercicios.filter(ex => {
@@ -166,18 +167,6 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
   });
 
   const abrirDetalhes = (ex: Exercicio) => { setExercicioSelecionado(ex); setModalDetalhesOpen(true); };
-  
-  const abrirAdicionar = (ex: Exercicio) => {
-    if(!rotinaSelecionada) return alert("Selecione uma rotina primeiro!");
-    setExercicioSelecionado(ex);
-    setModalAddOpen(true);
-  };
-
-  // --- RENDERIZAÇÃO DE PÁGINAS ---
-  
-  if (showHowToUse) {
-    return <HowToUse onBack={() => setShowHowToUse(false)} />;
-  }
 
   if (showTracking) {
     return <Tracking session={session} onBack={() => setShowTracking(false)} />;
@@ -188,35 +177,24 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
       {/* HEADER */}
       <header className="header">
         <div style={{display: 'flex', alignItems: 'center', gap: '1rem'}}>
-          {/* Botão Menu Mobile */}
           <button className="btn-menu-mobile" onClick={() => setSidebarOpen(!sidebarOpen)}>
             <Menu />
           </button>
-          <div className="logo"><Dumbbell className="text-primary" /> Rep<span>mind</span></div>
+          <div className="logo"><Dumbbell className="text-primary" /> Rep<span>Mind</span></div>
         </div>
         
         <div style={{display:'flex', alignItems:'center', gap:'1rem'}}>
           
-          {/* Botão Evolução (Tracking) */}
+          {/* BOTÃO MEU DESEMPENHO */}
           <button 
             onClick={() => setShowTracking(true)} 
-            className="btn-icon" 
-            title="Minha Evolução"
-            style={{color: 'var(--text-muted)', background: 'transparent'}}
+            className="btn-performance"
           >
-            <TrendingUp size={20} />
+            <TrendingUp size={16} />
+            <span>Meu desempenho</span>
           </button>
 
-          {/* Botão Ajuda */}
-          <button 
-            onClick={() => setShowHowToUse(true)} 
-            className="btn-icon" 
-            title="Como usar" 
-            style={{color: 'var(--text-muted)', background: 'transparent'}}
-          >
-            <HelpCircle size={20} />
-          </button>
-
+          {/* User Badge e Logout */}
           <div className="user-badge">{session.nome || session.email}</div>
           <button className="btn-logout" onClick={onLogout} title="Sair"><X size={16}/></button>
         </div>
@@ -226,12 +204,29 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
         {/* OVERLAY MOBILE */}
         {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)}></div>}
 
-        {/* SIDEBAR */}
-        <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+        {/* SIDEBAR COM CLASSE DE TUTORIAL */}
+        <aside className={`sidebar ${sidebarOpen ? 'open' : ''} ${highlightSidebar ? 'tutorial-highlight' : ''}`}>
           <div className="sidebar-header">
             <span>Minhas Rotinas</span>
-            <button onClick={() => setModalNovaRotinaOpen(true)} className="btn-icon-add"><Plus size={20}/></button>
+            <button 
+              onClick={() => setModalNovaRotinaOpen(true)} 
+              className={`btn-icon-add ${highlightSidebar ? 'pulse-btn' : ''}`}
+            >
+              <Plus size={20}/>
+            </button>
           </div>
+        
+          {highlightSidebar && rotinas.length === 0 && (
+            <div className="tutorial-bubble">
+              👆 Crie sua primeira rotina aqui!
+            </div>
+          )}
+          {highlightSidebar && rotinas.length > 0 && (
+            <div className="tutorial-bubble">
+              👆 Selecione uma rotina primeiro!
+            </div>
+          )}
+
           <div className="rotinas-list">
             {rotinas.map(rot => (
               <div key={rot.id} 
@@ -239,7 +234,8 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
                 onClick={() => {
                   setRotinaSelecionada(rot.id);
                   setSidebarOpen(false); 
-                  setMobileDetailsOpen(true); // Abre painel ao selecionar no mobile
+                  setMobileDetailsOpen(true);
+                  setHighlightSidebar(false); 
                 }}
               >
                 <span className="truncate">{rot.titulo}</span> {rotinaSelecionada === rot.id && <ChevronRight size={16} />}
@@ -276,7 +272,6 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
             ))}
           </div>
 
-          {/* Botão Flutuante (FAB) Mobile */}
           {rotinaSelecionada && !mobileDetailsOpen && (
             <button className="fab-routine-counter" onClick={() => setMobileDetailsOpen(true)}>
               <ShoppingBag size={20} /> 
@@ -298,7 +293,6 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
               </button>
             </div>
 
-            {/* Botão para minimizar e adicionar (Aparece só no Mobile) */}
             <div className="mobile-only-block" style={{padding: '0 1rem 1rem'}}>
               <button 
                 className="btn-primary full" 
@@ -336,7 +330,7 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
         )}
       </div>
 
-      {/* --- MODAIS --- */}
+      {/* MODAIS */}
       {modalAddOpen && (
         <div className="overlay">
           <div className="modal">
@@ -359,7 +353,6 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
               <button className="btn-close" onClick={() => setModalDetalhesOpen(false)}><X size={24}/></button>
             </div>
             <div className="modal-body">
-              {/* Ajuste importante: uso de video_url conforme definido nos seus types */}
               {exercicioSelecionado.link_video ? (
                 <div className="video-wrapper"><iframe src={exercicioSelecionado.link_video.replace("watch?v=", "embed/")} title="Video" frameBorder="0" allowFullScreen></iframe></div>
               ) : (
