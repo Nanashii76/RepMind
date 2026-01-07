@@ -27,7 +27,6 @@ const MONTH_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 export function Tracking({ session, onBack }: TrackingProps) {
   const [periodoFiltro, setPeriodoFiltro] = useState<PeriodFilter>('personalizado'); 
   const [diasPeriodo, setDiasPeriodo] = useState(180); 
-  const [showDropdown, setShowDropdown] = useState(false);
 
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
@@ -226,7 +225,6 @@ export function Tracking({ session, onBack }: TrackingProps) {
     fetchEspecifico();
   }, [exercicioSelecionado, diasPeriodo, session.clientId]);
 
-  // Helpers Radar
   const toggleMes = (mes: string) => {
     if (mesesSelecionados.includes(mes)) {
       setMesesSelecionados(mesesSelecionados.filter(m => m !== mes));
@@ -236,16 +234,14 @@ export function Tracking({ session, onBack }: TrackingProps) {
     }
   };
 
-  // Helpers Calendário
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
   
   const generateCalendarDays = () => {
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(monthStart);
-    const startDate = startOfWeek(monthStart); // Domingo
+    const startDate = startOfWeek(monthStart);
     const endDate = endOfWeek(monthEnd);
-    
     return eachDayOfInterval({ start: startDate, end: endDate });
   };
 
@@ -272,28 +268,43 @@ export function Tracking({ session, onBack }: TrackingProps) {
             {periodo.label}
           </button>
         ))}
-        <div className="dropdown-container">
+
+        <div className="dropdown-container" style={{position: 'relative'}}>
           <button
             className={`period-tab ${periodoFiltro === 'personalizado' ? 'active' : ''}`}
-            onClick={() => setShowDropdown(!showDropdown)}
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
           >
             Personalizado <ChevronDown size={16} />
           </button>
-          {showDropdown && (
-            <div className="dropdown-menu">
-              {[30, 90, 180, 365].map(d => (
-                <button key={d} onClick={() => { setDiasPeriodo(d); setPeriodoFiltro('personalizado'); setShowDropdown(false); }}>
-                  {d} dias
-                </button>
-              ))}
-            </div>
-          )}
+
+          <select
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              opacity: 0,
+              cursor: 'pointer'
+            }}
+            value={periodoFiltro === 'personalizado' ? diasPeriodo : ''}
+            onChange={(e) => {
+              setDiasPeriodo(Number(e.target.value));
+              setPeriodoFiltro('personalizado');
+            }}
+          >
+            <option value="" disabled>Selecionar dias</option>
+            {[30, 90, 180, 365].map(d => (
+              <option key={d} value={d} style={{color: '#333'}}>
+                {d} dias
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
       <div className="content-scroll">
         
-        {/* KPI CARDS */}
         <section className="performance-section">
           <h3 className="section-title">Performance Geral</h3>
           <div className="stats-grid">
@@ -327,15 +338,12 @@ export function Tracking({ session, onBack }: TrackingProps) {
           </div>
         </section>
 
-        {/* --- CALENDÁRIO MENSAL (CONSISTÊNCIA) --- */}
         <section className="chart-section">
           <div className="chart-header-with-select" style={{marginBottom: '1rem'}}>
              <div style={{display:'flex', alignItems:'center', gap:8}}>
                <CalendarIcon size={18} className="text-primary"/>
                <h4 className="chart-title" style={{borderLeft:'none', paddingLeft:0}}>Calendário de Treinos</h4>
              </div>
-             
-             {/* Navegação do Calendário */}
              <div className="calendar-nav">
                <button onClick={prevMonth} className="nav-btn"><ChevronLeft size={20}/></button>
                <span className="month-label">
@@ -347,12 +355,9 @@ export function Tracking({ session, onBack }: TrackingProps) {
 
           <div className="calendar-wrapper">
             <div className="calendar-grid">
-              {/* Dias da Semana */}
               {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((d, i) => (
                 <div key={i} className="calendar-weekday">{d}</div>
               ))}
-              
-              {/* Dias do Mês */}
               {generateCalendarDays().map((day) => {
                 const dayKey = format(day, 'yyyy-MM-dd');
                 const intensidade = heatmapData[dayKey] || 0;
@@ -376,7 +381,6 @@ export function Tracking({ session, onBack }: TrackingProps) {
           </div>
         </section>
 
-        {/* EVOLUÇÃO DE CARGA */}
         <section className="chart-section">
           <div className="chart-header-with-select">
             <h4 className="chart-title">Evolução de Carga</h4>
@@ -401,7 +405,6 @@ export function Tracking({ session, onBack }: TrackingProps) {
           </div>
         </section>
 
-        {/* GRID DUPLO */}
         <div className="dual-chart-grid">
           <section className="chart-section">
             <h4 className="chart-title">Volume Semanal</h4>
@@ -442,7 +445,6 @@ export function Tracking({ session, onBack }: TrackingProps) {
           </section>
         </div>
 
-        {/* RADAR COMPARAÇÃO */}
         <section className="chart-section">
           <div className="chart-header-with-select" style={{justifyContent: 'flex-start', gap: '1rem'}}>
             <div style={{display:'flex', alignItems:'center', gap:8}}>
@@ -489,7 +491,6 @@ export function Tracking({ session, onBack }: TrackingProps) {
           </div>
         </section>
 
-        {/* RECORDES PESSOAIS */}
         <section className="chart-section">
           <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:'1rem'}}>
              <Trophy size={18} color="#fbbf24"/>

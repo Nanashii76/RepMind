@@ -1,4 +1,4 @@
-import { MessageCircle, Link2, Dumbbell, TrendingUp, BarChart3, Target, Zap, BookOpen } from 'lucide-react';
+import { MessageCircle, Link2, Dumbbell, TrendingUp, BarChart3, Zap, BookOpen } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom'; 
 import logoImg from '../assets/logorepmind.png';
@@ -38,7 +38,12 @@ export default function Home() {
       <nav className={`navbar ${scrollY > 50 ? 'scrolled' : ''}`}>
         <div className="navbar-content">
           <div className="brand">
-            <Target className="text-primary" size={32} />
+            {/* LOGO NA NAVBAR */}
+            <img 
+              src={logoImg} 
+              alt="RepMind Logo" 
+              style={{ height: '32px', width: 'auto' }} 
+            />
             <span>RepMind IA</span>
           </div>
           
@@ -123,16 +128,13 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ... (RESTANTE DO CÓDIGO DA LANDING PAGE - SEÇÕES 4 PASSOS, FEATURES, ETC) ... */}
-      {/* Mantenha o restante do código que você enviou aqui, até o footer */}
-      
+      {/* SEÇÃO 4 PASSOS */}
       <section className="section">
         <div className="container">
           <div className="section-header">
             <h2 className="section-title">
               A Evolução em <span className="text-primary">4 Passos Simples</span>
             </h2>
-            {/* ... Conteúdo dos passos ... */}
           </div>
           
           <div className="grid-2">
@@ -142,22 +144,52 @@ export default function Home() {
               <h3 className="card-title">Início no WhatsApp</h3>
               <p className="card-text">Envie uma mensagem para o RepMind IA. Simples como conversar com um amigo.</p>
             </div>
-            {/* ... Outros cards ... */}
-            <div className="step-card"><div className="step-number">2</div><Link2 className="icon-large" /><h3 className="card-title">Cadastro</h3><p className="card-text">Receba o link e cadastre seu treino.</p></div>
-            <div className="step-card"><div className="step-number">3</div><Dumbbell className="icon-large" /><h3 className="card-title">Registro</h3><p className="card-text">Anote cargas durante o treino.</p></div>
-            <div className="step-card"><div className="step-number">4</div><TrendingUp className="icon-large" /><h3 className="card-title">Evolução</h3><p className="card-text">Acesse gráficos detalhados.</p></div>
+            
+            <div className="step-card">
+              <div className="step-number">2</div>
+              <Link2 className="icon-large" />
+              <h3 className="card-title">Cadastro</h3>
+              <p className="card-text">Receba o link e cadastre seu treino.</p>
+            </div>
+            
+            <div className="step-card">
+              <div className="step-number">3</div>
+              <Dumbbell className="icon-large" />
+              <h3 className="card-title">Registro</h3>
+              <p className="card-text">Anote cargas durante o treino.</p>
+            </div>
+            
+            <div className="step-card">
+              <div className="step-number">4</div>
+              <TrendingUp className="icon-large" />
+              <h3 className="card-title">Evolução</h3>
+              <p className="card-text">Acesse gráficos detalhados.</p>
+            </div>
           </div>
         </div>
       </section>
 
        <section className="section" style={{ background: 'linear-gradient(to bottom, transparent, rgba(74, 144, 226, 0.05), transparent)' }}>
-        {/* ... SEÇÃO FEATURES ... */}
         <div className="container">
-             <div className="section-header"><h2 className="section-title">Por Que <span className="text-primary">RepMind IA</span>?</h2></div>
+             <div className="section-header">
+               <h2 className="section-title">Por Que <span className="text-primary">RepMind IA</span>?</h2>
+             </div>
              <div className="grid-3">
-                <div className="feature-card"><BarChart3 className="icon-medium" /><h3 className="card-title">Comparação</h3><p className="card-text">Visualize progressão.</p></div>
-                <div className="feature-card"><TrendingUp className="icon-medium" /><h3 className="card-title">Volume</h3><p className="card-text">Acompanhe volume total.</p></div>
-                <div className="feature-card"><MessageCircle className="icon-medium" /><h3 className="card-title">Conveniência</h3><p className="card-text">Use o WhatsApp.</p></div>
+                <div className="feature-card">
+                  <BarChart3 className="icon-medium" />
+                  <h3 className="card-title">Comparação</h3>
+                  <p className="card-text">Visualize progressão.</p>
+                </div>
+                <div className="feature-card">
+                  <TrendingUp className="icon-medium" />
+                  <h3 className="card-title">Volume</h3>
+                  <p className="card-text">Acompanhe volume total.</p>
+                </div>
+                <div className="feature-card">
+                  <MessageCircle className="icon-medium" />
+                  <h3 className="card-title">Conveniência</h3>
+                  <p className="card-text">Use o WhatsApp.</p>
+                </div>
              </div>
         </div>
       </section>
@@ -165,7 +197,12 @@ export default function Home() {
       <footer>
         <div className="footer-content">
           <div className="brand">
-            <Target className="text-primary" size={24} />
+            {/* LOGO NO FOOTER */}
+            <img 
+              src={logoImg} 
+              alt="RepMind Logo" 
+              style={{ height: '24px', width: 'auto' }} 
+            />
             <span>RepMind IA</span>
           </div>
           <p className="card-text" style={{fontSize: '0.875rem'}}>

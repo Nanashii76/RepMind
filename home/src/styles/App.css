@@ -403,8 +403,6 @@ footer {
   }
   
   .content-column { padding-top: 2rem; }
-  
-  /* Ajusta chat para não dominar a tela */
   .demo-chat-window { height: 500px; }
 }
 
@@ -412,9 +410,32 @@ footer {
 @media (max-width: 768px) {
   .section { padding: 4rem 1.5rem; }
   
-  .hero-title { font-size: 2.25rem; margin-bottom: 1rem; }
-  .hero-subtitle { font-size: 1.1rem; margin-bottom: 2rem; }
-  .hero-section { padding-top: 6rem; min-height: auto; padding-bottom: 4rem; }
+  /* Ajuste do Hero para subir o conteúdo */
+  .hero-section { 
+    padding-top: 7rem; /* Espaço para a navbar */
+    min-height: auto; 
+    padding-bottom: 4rem; 
+    align-items: flex-start; /* Alinha ao topo em vez de centro vertical */
+  }
+  
+  .hero-title { 
+    font-size: 2.5rem; 
+    margin-bottom: 1rem;
+    line-height: 1.1; 
+  }
+  
+  .hero-subtitle { 
+    font-size: 1.1rem; 
+    margin-bottom: 2rem; 
+  }
+
+  /* Container de botões (Se houver um wrapper em volta deles) */
+  .hero-buttons {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 1rem;
+  }
 
   /* Stats em coluna */
   .stats-container {
@@ -422,11 +443,17 @@ footer {
     gap: 2rem;
     margin-top: 3rem;
     align-items: center;
+    width: 100%;
   }
   
-  /* Linha divisória vira horizontal ou some */
+  .stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
   .divider { 
-    width: 50%; height: 1px; 
+    width: 50px; height: 1px; 
     background-color: var(--border-light);
     margin: 0.5rem 0;
   }
@@ -434,7 +461,6 @@ footer {
   .sticky-chat-container { max-width: 100%; }
   .demo-chat-window { height: 450px; border-radius: 1rem; }
 
-  /* Footer empilhado */
   .footer-content {
     flex-direction: column;
     gap: 1.5rem;
@@ -442,22 +468,49 @@ footer {
   }
 }
 
-/* Celulares Pequenos (max-width: 480px) */
+/* Celulares Pequenos (max-width: 480px) - AQUI ESTÁ A CORREÇÃO DA IMAGEM */
 @media (max-width: 480px) {
+  /* Navbar mais compacta */
+  .navbar { padding: 0.5rem 0; }
+  
   .navbar-content {
-    flex-direction: column;
-    gap: 1rem;
-    padding: 0.5rem 1rem;
+    flex-direction: row; /* Mantém logo e menu lado a lado se possível */
+    justify-content: space-between;
+    padding: 0.5rem 1.5rem;
   }
   
-  .section-title { font-size: 1.75rem; }
+  /* Se tiver links na navbar, escondê-los ou ajustar */
+  .nav-links { display: none; } /* Exemplo: esconder links no mobile se não tiver menu hambúrguer */
+
+  /* Hero Title Reduzido para não quebrar */
+  .hero-title { 
+    font-size: 2rem; /* Reduzido de 3.5rem */
+    padding: 0 0.5rem;
+  }
   
-  /* Botões largura total para facilitar o clique */
+  .hero-subtitle {
+    font-size: 1rem;
+    padding: 0 1rem;
+  }
+
+  /* Botões Largura Total e com espaçamento */
   .btn-primary, .btn-secondary {
     width: 100%;
     justify-content: center;
+    margin-bottom: 0.5rem; /* Espaço entre botões empilhados */
+    padding: 0.8rem 1rem; /* Área de toque melhor */
   }
   
+  /* Correção do "100%" cortado */
+  .stats-container {
+    margin-top: 2rem;
+    gap: 1.5rem;
+  }
+  
+  .stat-item .stat-value {
+    font-size: 2rem; /* Garante que o número fique visível e impactante */
+  }
+
   .step-card, .feature-card { padding: 1.5rem; }
   .step-number { width: 2.5rem; height: 2.5rem; font-size: 1rem; top: -1rem; left: -0.5rem; }
 }
