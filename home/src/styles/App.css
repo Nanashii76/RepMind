@@ -468,49 +468,103 @@ footer {
   }
 }
 
-/* Celulares Pequenos (max-width: 480px) - AQUI ESTÁ A CORREÇÃO DA IMAGEM */
+/* Celulares Pequenos (max-width: 480px) */
 @media (max-width: 480px) {
-  /* Navbar mais compacta */
-  .navbar { padding: 0.5rem 0; }
   
-  .navbar-content {
-    flex-direction: row; /* Mantém logo e menu lado a lado se possível */
-    justify-content: space-between;
-    padding: 0.5rem 1.5rem;
-  }
-  
-  /* Se tiver links na navbar, escondê-los ou ajustar */
-  .nav-links { display: none; } /* Exemplo: esconder links no mobile se não tiver menu hambúrguer */
+  /* --- CORREÇÕES DA NAVBAR (CABEÇALHO) --- */
 
-  /* Hero Title Reduzido para não quebrar */
+  /* 1. Esconde o link "Como Funciona" para limpar o visual e evitar quebra de linha */
+  .navbar .nav-link {
+    display: none; 
+  }
+
+  /* 2. Força a Navbar a ficar em uma única linha (Logo esquerda, Botão direita) */
+  .navbar-content {
+    flex-wrap: nowrap !important;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem; /* Padding lateral menor */
+  }
+
+  /* 3. Reduz levemente a Logo para ganhar espaço */
+  .brand {
+    font-size: 1rem;
+    white-space: nowrap; /* Impede que o nome da marca quebre */
+  }
+  .brand img {
+    height: 24px !important; /* Logo menor no mobile */
+  }
+
+  /* 4. Estilo específico para o botão "Começar Agora" DENTRO DA NAVBAR */
+  .navbar .btn-primary {
+    padding: 0.4rem 0.8rem;  /* Menor e mais compacto */
+    font-size: 0.8rem;       /* Texto menor */
+    min-height: 36px;        /* Altura suficiente, mas não exagerada */
+    width: auto;             /* Largura automática (não 100%) */
+    margin-bottom: 0;        /* Sem margem extra */
+  }
+
+  /* --- CORREÇÕES DO HERO (CONTEÚDO) --- */
+
+  /* 5. Aumenta o espaço superior para o Badge não colar no Header */
+  .hero-section {
+    padding-top: 6rem; /* Garante respiro entre o header e o conteúdo */
+    align-items: center; /* Centraliza novamente para o layout mobile ficar bonito */
+    padding-bottom: 3rem;
+  }
+
+  /* O Badge (Rastreamento Inteligente) */
+  .badge {
+    margin-top: 1rem;      /* Empurra um pouco para baixo se necessário */
+    margin-bottom: 1.5rem; /* Espaço antes do título */
+    font-size: 0.75rem;    /* Texto um pouco menor */
+    padding: 0.4rem 0.8rem;
+  }
+
+  /* Título Principal */
   .hero-title { 
-    font-size: 2rem; /* Reduzido de 3.5rem */
+    font-size: 2rem; 
     padding: 0 0.5rem;
+    margin-bottom: 1rem;
   }
   
   .hero-subtitle {
     font-size: 1rem;
     padding: 0 1rem;
+    margin-bottom: 2rem;
   }
 
-  /* Botões Largura Total e com espaçamento */
-  .btn-primary, .btn-secondary {
-    width: 100%;
-    justify-content: center;
-    margin-bottom: 0.5rem; /* Espaço entre botões empilhados */
-    padding: 0.8rem 1rem; /* Área de toque melhor */
-  }
+  /* --- BOTÕES PRINCIPAIS DA PÁGINA (HERO) --- */
   
-  /* Correção do "100%" cortado */
+  /* Container dos botões lado a lado */
+  .hero-content div[style*="display: flex"] {
+    flex-direction: row !important;
+    justify-content: center;
+    gap: 0.8rem !important;
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  /* Estilo dos botões principais */
+  .btn-primary:not(.navbar .btn-primary), 
+  .btn-secondary, 
+  .btn-large {
+    width: auto;
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+    min-height: 44px;
+    margin-bottom: 0;
+  }
+
+  /* Stats Container (100% / 0 / Infinito) */
   .stats-container {
     margin-top: 2rem;
-    gap: 1.5rem;
+    gap: 1rem;
+    flex-direction: row; /* Mantém na horizontal se couber */
+    flex-wrap: wrap;     /* Quebra se a tela for muito pequena (iPhone SE) */
+    justify-content: center;
   }
   
   .stat-item .stat-value {
-    font-size: 2rem; /* Garante que o número fique visível e impactante */
+    font-size: 1.75rem; 
   }
-
-  .step-card, .feature-card { padding: 1.5rem; }
-  .step-number { width: 2.5rem; height: 2.5rem; font-size: 1rem; top: -1rem; left: -0.5rem; }
 }
