@@ -10,7 +10,9 @@ import {
   X, 
   GripVertical, 
   Menu, 
-  TrendingUp 
+  TrendingUp,
+  Edit2, 
+  Save,
 } from 'lucide-react';
 
 import { supabase } from '../lib/supabase';
@@ -40,20 +42,27 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
   const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false);
   const [showTracking, setShowTracking] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-
-  // --- ESTADO LOCAL DE USUÁRIO (Para atualizar nome sem refresh) ---
   const [displayName, setDisplayName] = useState(session.nome || session.email);
 
   // --- TUTORIAL VISUAL ---
   const [highlightSidebar, setHighlightSidebar] = useState(false);
 
-  // --- MODAIS ---
+  // --- MODAIS & FORMULÁRIOS ---
   const [modalAddOpen, setModalAddOpen] = useState(false);
+  const [modalEditItemOpen, setModalEditItemOpen] = useState(false);
   const [modalDetalhesOpen, setModalDetalhesOpen] = useState(false);
-  const [exercicioSelecionado, setExercicioSelecionado] = useState<Exercicio | null>(null);
-  const [formTreino, setFormTreino] = useState({ series: '3', reps: '12', descanso: '60s' });
+  
+  // Estados para CRUD de Rotina
   const [modalNovaRotinaOpen, setModalNovaRotinaOpen] = useState(false);
-  const [nomeNovaRotina, setNomeNovaRotina] = useState('');
+  const [modalEditarRotinaOpen, setModalEditarRotinaOpen] = useState(false);
+  const [nomeRotinaForm, setNomeRotinaForm] = useState('');
+
+  // Estados de Seleção/Edição
+  const [exercicioSelecionado, setExercicioSelecionado] = useState<Exercicio | null>(null);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  
+  // Formulário de Treino
+  const [formTreino, setFormTreino] = useState({ series: '3', reps: '12', descanso: '60s' });
 
   // --- REFS (Drag & Drop) ---
   const dragItem = useRef<number | null>(null);
@@ -68,7 +77,9 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
       const { data: rotData } = await supabase!
         .from('rotinas_treino')
         .select('*')
-        .eq('cliente_id', session.clientId);
+        .eq('cliente_id', session.clientId)
+        .order('id', { ascending: true });
+      
       if (rotData) setRotinas(rotData);
     }
     fetchDados();
@@ -119,29 +130,56 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
     ));
   };
 
-  // --- AÇÕES ---
   const criarRotina = async () => {
-    if (!supabase || !nomeNovaRotina) return;
+    if (!supabase || !nomeRotinaForm) return;
     const { data } = await supabase.from('rotinas_treino')
-      .insert([{ titulo: nomeNovaRotina, cliente_id: session.clientId }])
+      .insert([{ titulo: nomeRotinaForm, cliente_id: session.clientId }])
       .select();
     if (data) {
       setRotinas([...rotinas, data[0]]);
       setModalNovaRotinaOpen(false);
-      setNomeNovaRotina('');
+      setNomeRotinaForm('');
       setRotinaSelecionada(data[0].id);
       setHighlightSidebar(false);
+    }
+  };
+
+  const atualizarNomeRotina = async () => {
+    if (!supabase || !nomeRotinaForm || !rotinaSelecionada) return;
+    
+    const { error } = await supabase
+      .from('rotinas_treino')
+      .update({ titulo: nomeRotinaForm })
+      .eq('id', rotinaSelecionada);
+
+    if (!error) {
+      setRotinas(rotinas.map(r => r.id === rotinaSelecionada ? { ...r, titulo: nomeRotinaForm } : r));
+      setModalEditarRotinaOpen(false);
+      setNomeRotinaForm('');
+    }
+  };
+
+  const excluirRotina = async () => {
+    if (!supabase || !rotinaSelecionada) return;
+    
+    if (window.confirm("Tem certeza? Isso apagará a rotina e todos os exercícios nela.")) {
+      await supabase.from('rotinas_treino').delete().eq('id', rotinaSelecionada);
+      setRotinas(rotinas.filter(r => r.id !== rotinaSelecionada));
+      setRotinaSelecionada(null);
+      setMobileDetailsOpen(false);
+      setItensRotina([]);
     }
   };
 
   const abrirAdicionar = (ex: Exercicio) => {
     if(!rotinaSelecionada) {
       setHighlightSidebar(true);
-      setSidebarOpen(true); // Abre no mobile se estiver fechado
-      setTimeout(() => setHighlightSidebar(false), 2500); // Remove destaque após 2.5s
+      setSidebarOpen(true);
+      setTimeout(() => setHighlightSidebar(false), 2500);
       return; 
     }
     setExercicioSelecionado(ex);
+    setFormTreino({ series: '3', reps: '12', descanso: '60s' });
     setModalAddOpen(true);
   };
 
@@ -163,15 +201,46 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
     }
   };
 
+  const abrirEditarItem = (item: ItemRotina) => {
+    setEditingItemId(item.id);
+    setFormTreino({
+      series: item.qtd_series || '3',
+      reps: item.qtd_repeticoes || '12',
+      descanso: item.tempo_descanso || '60s'
+    });
+    setModalEditItemOpen(true);
+  };
+
+  const salvarEdicaoItem = async () => {
+    if (!supabase || !editingItemId) return;
+
+    const { error } = await supabase
+      .from('exercicios_rotina')
+      .update({
+        qtd_series: formTreino.series,
+        qtd_repeticoes: formTreino.reps,
+        tempo_descanso: formTreino.descanso
+      })
+      .eq('id', editingItemId);
+
+    if (!error) {
+      setItensRotina(itensRotina.map(item => 
+        item.id === editingItemId 
+          ? { ...item, qtd_series: formTreino.series, qtd_repeticoes: formTreino.reps, tempo_descanso: formTreino.descanso } 
+          : item
+      ));
+      setModalEditItemOpen(false);
+      setEditingItemId(null);
+    }
+  };
+
   const removerItem = async (id: string) => {
     if (!supabase) return;
     await supabase.from('exercicios_rotina').delete().eq('id', id);
     setItensRotina(itensRotina.filter(i => i.id !== id));
   };
 
-  // Helpers de Filtro
   const gruposMusculares = Array.from(new Set(exercicios.map(ex => ex.grupo_muscular))).sort();
-  
   const exerciciosFiltrados = exercicios.filter(ex => {
     const matchBusca = ex.nome.toLowerCase().includes(termoBusca.toLowerCase());
     const matchGrupo = filtroGrupo ? ex.grupo_muscular === filtroGrupo : true;
@@ -179,25 +248,9 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
   });
 
   const abrirDetalhes = (ex: Exercicio) => { setExercicioSelecionado(ex); setModalDetalhesOpen(true); };
-
   
-  if (showTracking) {
-    return <Tracking session={session} onBack={() => setShowTracking(false)} />;
-  }
-
-  if (showProfile) {
-    return (
-      <Profile 
-        session={session} 
-        onBack={() => setShowProfile(false)} 
-        onLogout={onLogout}
-        onUpdateSession={(newName) => {
-          session.nome = newName;
-          setDisplayName(newName);
-        }}
-      />
-    );
-  }
+  if (showTracking) return <Tracking session={session} onBack={() => setShowTracking(false)} />;
+  if (showProfile) return <Profile session={session} onBack={() => setShowProfile(false)} onLogout={onLogout} onUpdateSession={(n) => {session.nome = n; setDisplayName(n);}} />;
 
   return (
     <div className="app-container">
@@ -211,32 +264,15 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
         </div>
         
         <div style={{display:'flex', alignItems:'center', gap:'1rem'}}>
-          
-          {/* Botão Meu Desempenho */}
-          <button 
-            onClick={() => setShowTracking(true)} 
-            className="btn-performance"
-          >
-            <TrendingUp size={16} />
-            <span>Meu desempenho</span>
+          <button onClick={() => setShowTracking(true)} className="btn-performance">
+            <TrendingUp size={16} /><span>Meu desempenho</span>
           </button>
-
-          {/* User Badge (Clicável para Perfil) */}
-          <button 
-            className="user-badge" 
-            onClick={() => setShowProfile(true)}
-            title="Editar Perfil"
-            style={{cursor: 'pointer', border: 'none', fontSize: '0.8rem'}}
-          >
-            {displayName}
-          </button>
-
+          <button className="user-badge" onClick={() => setShowProfile(true)}>{displayName}</button>
           <button className="btn-logout" onClick={onLogout} title="Sair"><X size={16}/></button>
         </div>
       </header>
 
       <div className="main">
-        {/* OVERLAY MOBILE */}
         {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)}></div>}
 
         {/* SIDEBAR */}
@@ -244,14 +280,13 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
           <div className="sidebar-header">
             <span>Minhas Rotinas</span>
             <button 
-              onClick={() => setModalNovaRotinaOpen(true)} 
+              onClick={() => { setNomeRotinaForm(''); setModalNovaRotinaOpen(true); }} 
               className={`btn-icon-add ${highlightSidebar ? 'pulse-btn' : ''}`}
             >
               <Plus size={20}/>
             </button>
           </div>
 
-          {/* Balão de Ajuda do Tutorial */}
           {highlightSidebar && (
             <div className="tutorial-bubble">
               {rotinas.length === 0 ? "👆 Crie sua primeira rotina aqui!" : "👆 Selecione uma rotina primeiro!"}
@@ -303,7 +338,6 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
             ))}
           </div>
 
-          {/* BOTÃO FLUTUANTE (MOBILE) */}
           {rotinaSelecionada && !mobileDetailsOpen && (
             <button className="fab-routine-counter" onClick={() => setMobileDetailsOpen(true)}>
               <Dumbbell size={20} /> 
@@ -318,8 +352,29 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
             <div className="routine-header">
               <div className="rh-title">
                 <h3>{rotinas.find(r => r.id === rotinaSelecionada)?.titulo}</h3>
-                <span className="routine-count">{itensRotina.length} exercícios</span>
+                
+                <div className="actions-group">
+                  <button 
+                    className="action-btn edit" 
+                    title="Renomear Rotina"
+                    onClick={() => {
+                       const rotinaAtual = rotinas.find(r => r.id === rotinaSelecionada);
+                       if(rotinaAtual) setNomeRotinaForm(rotinaAtual.titulo);
+                       setModalEditarRotinaOpen(true);
+                    }}
+                  >
+                    <Edit2 size={16} />
+                  </button>
+                  <button 
+                    className="action-btn delete" 
+                    title="Excluir Rotina" 
+                    onClick={excluirRotina}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </div>
+              
               <button className="btn-close-panel" onClick={() => { setRotinaSelecionada(null); setMobileDetailsOpen(false); }}>
                 <X size={20} />
               </button>
@@ -350,23 +405,48 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
                       <GripVertical size={16} className="grip-icon" />
                       <strong>{item.exercicio_detalhes?.nome}</strong>
                     </div>
-                    <button className="btn-delete" onClick={() => removerItem(item.id)}><Trash2 size={16} /></button>
+
+                    <div className="actions-group">
+                      <button 
+                        className="action-btn edit" 
+                        title="Editar Séries/Reps" 
+                        onClick={() => abrirEditarItem(item)}
+                      >
+                        <Edit2 size={15} />
+                      </button>
+                      <button 
+                        className="action-btn delete" 
+                        title="Remover Exercício" 
+                        onClick={() => removerItem(item.id)}
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+
                   </div>
                   <div className="ric-specs">
                     <span>{item.qtd_series} x {item.qtd_repeticoes}</span><span>⏱ {item.tempo_descanso}</span>
                   </div>
                 </div>
               ))}
+              {itensRotina.length === 0 && (
+                <div style={{padding: '2rem', textAlign: 'center', color: 'var(--text-muted)'}}>
+                  <p>Essa rotina está vazia.</p>
+                  <p style={{fontSize: '0.9rem'}}>Selecione exercícios ao lado para adicionar.</p>
+                </div>
+              )}
             </div>
           </aside>
         )}
       </div>
 
       {/* --- MODAIS --- */}
+
+      {/* 1. ADICIONAR EXERCÍCIO */}
       {modalAddOpen && (
         <div className="overlay">
           <div className="modal">
-            <div className="modal-header"><h3>Configurar</h3><button className="btn-close" onClick={() => setModalAddOpen(false)}><X size={20}/></button></div>
+            <div className="modal-header"><h3>Adicionar à Rotina</h3><button className="btn-close" onClick={() => setModalAddOpen(false)}><X size={20}/></button></div>
             <div className="form-grid">
               <div className="form-group"><label>Séries</label><input value={formTreino.series} onChange={e => setFormTreino({...formTreino, series: e.target.value})} /></div>
               <div className="form-group"><label>Reps</label><input value={formTreino.reps} onChange={e => setFormTreino({...formTreino, reps: e.target.value})} /></div>
@@ -377,6 +457,22 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
         </div>
       )}
 
+      {/* 2. EDITAR EXERCÍCIO (ITEM) */}
+      {modalEditItemOpen && (
+        <div className="overlay">
+          <div className="modal">
+            <div className="modal-header"><h3>Editar Exercício</h3><button className="btn-close" onClick={() => setModalEditItemOpen(false)}><X size={20}/></button></div>
+            <div className="form-grid">
+              <div className="form-group"><label>Séries</label><input value={formTreino.series} onChange={e => setFormTreino({...formTreino, series: e.target.value})} /></div>
+              <div className="form-group"><label>Reps</label><input value={formTreino.reps} onChange={e => setFormTreino({...formTreino, reps: e.target.value})} /></div>
+              <div className="form-group"><label>Descanso</label><input value={formTreino.descanso} onChange={e => setFormTreino({...formTreino, descanso: e.target.value})} /></div>
+            </div>
+            <div className="modal-actions"><button className="btn-primary full" onClick={salvarEdicaoItem}><Save size={18}/> Salvar Alterações</button></div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. DETALHES EXERCÍCIO */}
       {modalDetalhesOpen && exercicioSelecionado && (
         <div className="overlay" onClick={() => setModalDetalhesOpen(false)}>
           <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
@@ -402,14 +498,29 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
         </div>
       )}
 
+      {/* 4. NOVA ROTINA */}
       {modalNovaRotinaOpen && (
         <div className="overlay">
           <div className="modal">
             <h3>Nova Rotina</h3>
-            <div className="form-group"><label>Nome</label><input autoFocus value={nomeNovaRotina} onChange={e => setNomeNovaRotina(e.target.value)} /></div>
+            <div className="form-group"><label>Nome</label><input autoFocus value={nomeRotinaForm} onChange={e => setNomeRotinaForm(e.target.value)} /></div>
             <div className="modal-actions">
                <button className="btn-secondary" onClick={() => setModalNovaRotinaOpen(false)}>Cancelar</button>
                <button className="btn-primary" onClick={criarRotina}>Criar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 5. EDITAR NOME ROTINA */}
+      {modalEditarRotinaOpen && (
+        <div className="overlay">
+          <div className="modal">
+            <h3>Renomear Rotina</h3>
+            <div className="form-group"><label>Nome</label><input autoFocus value={nomeRotinaForm} onChange={e => setNomeRotinaForm(e.target.value)} /></div>
+            <div className="modal-actions">
+               <button className="btn-secondary" onClick={() => setModalEditarRotinaOpen(false)}>Cancelar</button>
+               <button className="btn-primary" onClick={atualizarNomeRotina}>Salvar</button>
             </div>
           </div>
         </div>
