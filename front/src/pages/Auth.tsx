@@ -104,7 +104,7 @@ export function AuthPage({ onLoginSuccess }: AuthPageProps) {
               <Lock size={18} />
               <input 
                 type="text" placeholder="000000" 
-                value={code} onChange={e => setCode(e.target.value)} 
+                value={code} onChange={e => setCode(e.target.value.toUpperCase())} 
                 autoFocus onKeyDown={e => e.key === 'Enter' && handleVerifyCode()}
               />
             </div>
