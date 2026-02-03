@@ -1,11 +1,10 @@
 /* --- VARIÁVEIS DE CSS (RepMind IA Style) --- */
-
 :root {
-  --primary: #4A90E2;           /* Azul Tecnológico (RepMind) */
-  --primary-hover: #357ABD;     /* Azul Mais Escuro (Hover) */
-  --bg-dark: #0A0A0A;           /* Fundo Principal (Preto Profundo) */
-  --bg-card: #1A1A1A;           /* Fundo Card (Preto com destaque) */
-  --bg-hover: #2A2A2A;          /* Hover (Cinza Escuro) */
+  --primary: #4A90E2;           /* Azul Tecnológico */
+  --primary-hover: #357ABD;     /* Azul Mais Escuro */
+  --bg-dark: #0A0A0A;           /* Fundo Principal */
+  --bg-card: #1A1A1A;           /* Fundo Card */
+  --bg-hover: #2A2A2A;          /* Hover */
   --text-main: #F1F5F9;         /* Branco Suave */
   --text-muted: #94A3B8;        /* Cinza Texto */
   --border: #2D2D2D;            /* Borda Sutil */
@@ -14,10 +13,10 @@
   --warning: #F59E0B;           /* Âmbar Alerta */
   --radius: 12px;               /* Arredondamento Padrão */
 
-  /* Cores complementares (RepMind) */
-  --accent-green: #10B981;      /* Verde Esmeralda */
-  --accent-orange: #F59E0B;     /* Âmbar/Ouro */
-  --accent-purple: #8B5CF6;     /* Roxo Suave */
+  /* Cores complementares */
+  --accent-green: #10B981;
+  --accent-orange: #F59E0B;
+  --accent-purple: #8B5CF6;
 }
 
 /* --- RESET & BASE --- */
@@ -63,7 +62,7 @@ a:hover {
   color: var(--primary-hover);
 }
 
-/* Scrollbar Bonita (RepMind Style) */
+/* Scrollbar Customizada */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -101,6 +100,7 @@ a:hover {
 /* --- AUTENTICAÇÃO --- */
 .auth-container {
   height: 100vh;
+  height: 100dvh; /* Fix Safari */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -242,6 +242,7 @@ a:hover {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh; /* Fix essencial para Safari iOS */
   overflow: hidden;
 }
 
@@ -301,7 +302,6 @@ a:hover {
   color: var(--danger);
 }
 
-/* Botão Performance (Novo) */
 .btn-performance {
   background: rgba(74, 144, 226, 0.15);
   border: 1px solid rgba(74, 144, 226, 0.3);
@@ -1072,7 +1072,6 @@ a:hover {
   gap: 2rem;
 }
 
-/* Grid de Estatísticas */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -1135,7 +1134,6 @@ a:hover {
   letter-spacing: 0.5px;
 }
 
-/* Charts */
 .chart-section {
   display: flex;
   flex-direction: column;
@@ -1158,6 +1156,7 @@ a:hover {
   padding: 1.5rem;
   position: relative;
   transition: all 0.3s ease;
+  min-height: 300px; /* Garante altura no Safari */
 }
 
 .chart-container:hover {
@@ -1204,7 +1203,6 @@ a:hover {
   gap: 1.5rem;
 }
 
-/* Heatmap & PRs */
 .heatmap-container {
   display: flex;
   flex-wrap: wrap;
@@ -1309,7 +1307,6 @@ a:hover {
   text-align: right;
 }
 
-/* Month Selector (Radar) */
 .month-selector {
   display: flex;
   gap: 0.5rem;
@@ -1487,7 +1484,6 @@ a:hover {
     border-radius: 8px;
   }
 
-  /* Botão Performance Mobile */
   .btn-performance span {
     display: none;
   }
@@ -1497,7 +1493,6 @@ a:hover {
     border-radius: 8px;
   }
 
-  /* Tracking Headers */
   .chart-header-with-select {
     flex-direction: column;
     align-items: stretch;
@@ -1513,11 +1508,6 @@ a:hover {
   }
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
 /* --- CALENDÁRIO MENSAL ESTILIZADO --- */
 .calendar-wrapper {
   background: var(--bg-card);
@@ -1528,7 +1518,6 @@ a:hover {
   margin: 0 auto;
 }
 
-/* Navegação do Calendário (Topo) */
 .calendar-nav {
   display: flex;
   align-items: center;
@@ -1564,7 +1553,6 @@ a:hover {
   font-size: 1rem;
 }
 
-/* Grid do Calendário */
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -1596,19 +1584,16 @@ a:hover {
   font-weight: 500;
 }
 
-/* Dias de outro mês (esmaecidos) */
 .calendar-day.other-month {
   opacity: 0.15;
 }
 
-/* Dia Atual (Borda azul) */
 .calendar-day.today {
   border: 2px solid var(--primary);
   color: white;
   font-weight: 700;
 }
 
-/* Níveis de Intensidade (Cores de Treino) */
 .calendar-day.level-1 {
   background: rgba(16, 185, 129, 0.15);
   color: var(--accent-green);
@@ -1634,7 +1619,6 @@ a:hover {
   box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
 }
 
-/* Responsividade do Calendário */
 @media (max-width: 768px) {
   .calendar-wrapper {
     padding: 1rem;
@@ -1708,7 +1692,6 @@ a:hover {
   margin: 1.5rem 0;
 }
 
-/* Feedback Messages */
 .msg-box {
   width: 100%;
   padding: 1rem;
@@ -1740,7 +1723,6 @@ a:hover {
   border: 1px solid rgba(74, 144, 226, 0.3);
 }
 
-/* Botão de Perigo (Sair) */
 .btn-danger-outline {
   background: transparent;
   border: 1px solid var(--danger);
@@ -1763,7 +1745,6 @@ a:hover {
 }
 
 /* --- BOTÕES DE AÇÃO (CRUD) --- */
-
 .actions-group {
   display: flex;
   gap: 8px;
@@ -1778,18 +1759,16 @@ a:hover {
   align-items: center;
   justify-content: center;
   border: 1px solid transparent;
-  background: rgba(255, 255, 255, 0.05); /* Fundo sutil */
-  color: #94a3b8; /* Cor cinza padrão */
+  background: rgba(255, 255, 255, 0.05);
+  color: #94a3b8;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
 }
 
-/* Efeito Hover Geral */
 .action-btn:active {
   transform: scale(0.95);
 }
 
-/* Variação: EDITAR (Azul) */
 .action-btn.edit:hover {
   background: rgba(59, 130, 246, 0.15);
   color: #60a5fa;
@@ -1798,7 +1777,6 @@ a:hover {
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
 }
 
-/* Variação: DELETAR (Vermelho) */
 .action-btn.delete:hover {
   background: rgba(239, 68, 68, 0.15);
   color: #f87171;
@@ -1807,7 +1785,91 @@ a:hover {
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
 }
 
-/* Ícones levemente menores para caber no box */
 .action-btn svg {
   stroke-width: 2px;
+}
+
+/* --- HOME / LANDING PAGE (RESPONSIVIDADE) --- */
+@media (max-width: 480px) {
+  
+  .navbar .nav-link {
+    display: none; 
+  }
+
+  .navbar-content {
+    flex-wrap: nowrap !important;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+  }
+
+  .brand {
+    font-size: 1rem;
+    white-space: nowrap;
+  }
+  .brand img {
+    height: 24px !important;
+  }
+
+  .navbar .btn-primary {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+    min-height: 36px;
+    width: auto;
+    margin-bottom: 0;
+  }
+
+  .hero-section {
+    padding-top: 6rem;
+    align-items: center;
+    padding-bottom: 3rem;
+  }
+
+  .badge {
+    margin-top: 1rem;
+    margin-bottom: 1.5rem;
+    font-size: 0.75rem;
+    padding: 0.4rem 0.8rem;
+  }
+
+  .hero-title { 
+    font-size: 2rem; 
+    padding: 0 0.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  .hero-subtitle {
+    font-size: 1rem;
+    padding: 0 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .hero-content div[style*="display: flex"] {
+    flex-direction: row !important;
+    justify-content: center;
+    gap: 0.8rem !important;
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .btn-primary:not(.navbar .btn-primary), 
+  .btn-secondary, 
+  .btn-large {
+    width: auto;
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+    min-height: 44px;
+    margin-bottom: 0;
+  }
+
+  .stats-container {
+    margin-top: 2rem;
+    gap: 1rem;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .stat-item .stat-value {
+    font-size: 1.75rem; 
+  }
 }
